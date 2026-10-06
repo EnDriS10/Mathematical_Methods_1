@@ -1,0 +1,1151 @@
+\documentclass[11pt, a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{amsmath, amssymb, amsfonts}
+\usepackage{geometry}
+\geometry{left=2.5cm, right=2.5cm, top=2.5cm, bottom=2.5cm}
+\usepackage{tikz}
+\usepackage{bm}
+
+% Línea discontinua entre ejercicios
+\newcommand{\separador}{\par\vspace{0.3cm}\noindent\begin{tikzpicture}\draw[dashed] (0,0) -- (\linewidth,0);\end{tikzpicture}\par\vspace{0.3cm}}
+
+\title{\vspace{-1.5cm}\textbf{Resolución de Ecuaciones Diferenciales Ordinarias}\\ \large Métodos Matemáticos I}
+\author{\textbf{César Endris Acosta}}
+
+\begin{document}
+
+\maketitle
+\vspace{0.2cm}
+
+\section{Hoja 1}
+
+\noindent\textbf{1. Integrad la EDO: $\bm{(1+y^2)dx + (1+x^2)dy = 0}$} \\
+\begin{align*}
+\frac{dx}{1+x^2} &= -\frac{dy}{1+y^2}
+\end{align*}
+$y = \tan(\theta) \implies dy = \sec^2(\theta)\,d\theta,\ \ 1+y^2=\sec^2(\theta)$.
+\[
+\int \frac{dy}{1+y^2} = \int \frac{\sec^2(\theta)\,d\theta}{\sec^2(\theta)} = \int d\theta = \theta = \arctan(y)
+\]
+\begin{align*}
+\arctan(x) &= -\arctan(y) + C
+\end{align*}
+\textit{Los denominadores $1+x^2$ y $1+y^2$ son siempre positivos ($\geq 1$) $\forall x,y\in\mathbb{R}$, por lo que no existe singularidad ni restricción de signo sobre $C$.}
+\[
+\boxed{\arctan(x) + \arctan(y) = C}
+\]
+
+
+\noindent\textbf{2. Integrad la EDO: $\bm{(1+y^2)dx + xydy = 0}$} \\
+\begin{align*}
+\frac{dx}{x} &= -\frac{y}{1+y^2}dy
+\end{align*}
+$u = 1+y^2 \implies du = 2y\,dy $.
+\[
+\int \frac{y}{1+y^2}dy = \int \frac{du/2}{u} = \frac{1}{2}\ln|u| = \frac{1}{2}\ln(1+y^2)
+\]
+\begin{align*}
+\int \frac{dx}{x} &= -\frac{1}{2}\int \frac{du}{u} \\
+\ln|x| &= -\frac{1}{2}\ln(1+y^2) + C
+\end{align*}
+\textit{Al dividir por $x$ se excluye $x=0$; sustituyendo en la ecuación original, $(1+y^2)\cdot 0 + 0\cdot y\,dy=0$ se cumple, así que la recta $x=0$ es también solución. En el caso ($x\neq0$), al despejar $x= \pm Ke^{-\frac12\ln(1+y^2)}$ con $K>0$, pero como $x^2(1+y^2)\geq0$ siempre, la constante final debe cumplir $K\geq0$ (con $K=0$ recuperando la solución singular $x=0$).}
+\[
+\boxed{x^2(1+y^2) = K, \qquad K\geq 0}
+\]
+
+
+\noindent\textbf{3. Integrad la EDO: $\bm{y'\sin(x)-y\cos(x)=0}$ con la condición inicial $\bm{y(\pi/2)=1}$} \\
+\begin{align*}
+\frac{dy}{y} &= \frac{\cos(x)}{\sin(x)}dx
+\end{align*}
+\textit{Al dividir por $y$ se excluye $y=0$; pero si $y\equiv 0$, entonces $y'=0$ y la ecuación original $0\cdot\sin(x)-0\cdot\cos(x)=0$ se satisface $\forall x$, luego $y=0$ es también solución. Con $y\neq0$:}
+\begin{align*}
+\int \frac{dy}{y} &= \int \cot(x)dx \\
+\ln|y| &= \ln|\sin(x)| + C
+\end{align*}
+Al exponenciar, $|y|=e^C|\sin(x)|$, y separando $y>0$ o $y<0$ se obtiene $y=\pm K\sin(x)$ con $K>0$; incluyendo $K=0$ se recupera el caso singular.
+Aplicando $y(\pi/2)=1 \implies 1 = K\sin(\pi/2) \implies K = 1$.
+\[
+\boxed{y = \sin(x)}
+\]
+
+
+\noindent\textbf{4. Integrad la EDO: $\bm{x\sqrt{1+y^2}+yy'\sqrt{1+x^2}=0}$} \\
+\begin{align*}
+\frac{x}{\sqrt{1+x^2}}dx &= -\frac{y}{\sqrt{1+y^2}}dy
+\end{align*}
+\[
+\int \frac{y}{\sqrt{1+y^2}}dy = \int \frac{du/2}{\sqrt{u}} = \sqrt{u} = \sqrt{1+y^2}
+\]
+\[
+\int \frac{x}{\sqrt{1+x^2}}dx=\sqrt{1+x^2}
+\]
+\begin{align*}
+\sqrt{1+x^2} &= -\sqrt{1+y^2} + C
+\end{align*}
+\textit{$\sqrt{1+x^2}\geq1$ y $\sqrt{1+y^2}\geq1$ siempre, no hay singularidad, pero sí una restricción: $C\geq2$.}
+\[
+\boxed{\sqrt{1+x^2} + \sqrt{1+y^2} = C, \qquad C\geq 2}
+\]
+
+
+\noindent\textbf{5. Integrad la EDO: $\bm{x\sqrt{1-y^2}dx+y\sqrt{1-x^2}dy=0}$ con la condición inicial $\bm{y(0)=1}$} \\
+\begin{align*}
+\frac{x}{\sqrt{1-x^2}}dx &= -\frac{y}{\sqrt{1-y^2}}dy \\
+\int \frac{x}{\sqrt{1-x^2}}dx &= -\int \frac{y}{\sqrt{1-y^2}}dy \\
+-\sqrt{1-x^2} &= \sqrt{1-y^2} + C \implies \sqrt{1-x^2} + \sqrt{1-y^2} = K
+\end{align*}
+\textit{El dominio exige $|x|\leq1$, $|y|\leq1$; en $x=\pm1$ o $y=\pm1$ las raíces se anulan (no constituyen curvas de solución independientes). Como $0\leq\sqrt{1-x^2}\leq1$ y $0\leq\sqrt{1-y^2}\leq1$, se requiere $0\leq K\leq2$.}
+Aplicando $y(0)=1 \implies \sqrt{1-0} + \sqrt{1-1} = K \implies K=1$.
+\[
+\boxed{\sqrt{1-x^2} + \sqrt{1-y^2} = 1}
+\]
+
+
+\noindent\textbf{6. Integrad la EDO: $\bm{e^{-y}(1+y')=1}$} \\
+\begin{align*}
+1+y' &= e^y \implies y' = e^y - 1 \implies \frac{dy}{e^y-1} = dx
+\end{align*}
+\textit{Al dividir por $e^y-1$ se excluye $y=0$; si $y\equiv0$, entonces $y'=0$ y la ecuación original $e^{0}(1+0)=1$ se cumple, luego $y=0$ es también solución (caso singular). En el caso $y\neq0$:}
+
+$u=e^y-1 \implies du=e^y\,dy=(u+1)\,dy \implies dy=\dfrac{du}{u+1}$.
+\begin{align*}
+\frac{dy}{e^y-1} &= \frac{du/(u+1)}{u} = \frac{du}{u(u+1)} \implies \dfrac{1}{u(u+1)}=( \dfrac{1}{u}-\dfrac{1}{u+1} ){du}.
+\end{align*}
+
+\begin{align*}
+\int \left(\frac{1}{u}-\frac{1}{u+1}\right)du &= \int dx \\
+\ln\left|\frac{u}{u+1}\right| &= x+C
+\end{align*}
+Deshaciendo el cambio: $\ln\left|\dfrac{e^y-1}{e^y}\right|=x+C \implies \ln|1-e^{-y}|=x+C$.
+\textit{Al exponenciar, $K>0$ (sin embargo con $\pm$ se recuperan todas las soluciones, positivo si $y>0$, negativo si $y<0$) y $K=0$ recupera el caso singular $y=0$.}
+\[
+\boxed{1 - e^{-y} = \pm K e^x}
+\]
+
+
+\noindent\textbf{7. Integrad la EDO: $\bm{y\ln y \, dx + x \, dy = 0}$ con la condición inicial $\bm{y(1)=1}$} \\
+\begin{align*}
+\frac{dx}{x} &= -\frac{dy}{y\ln y}
+\end{align*}
+\textit{El dominio requiere $y>0$; al dividir por $\ln y$ se excluye $y=1$. Si $y\equiv1$, entonces $y'=0$ y la ecuación original $1\cdot\ln(1)\,dx+x\cdot0=0$ se cumple, luego $y=1$ es también solución (caso singular).}
+
+$u = \ln y \implies du = \dfrac{dy}{y}$.
+\begin{align*}
+\int \frac{dx}{x} &= -\int \frac{du}{u} \\
+\ln|x| &= -\ln|u| + C \implies x\ln y = K
+\end{align*}
+Aplicando $y(1)=1 \implies 1 \cdot \ln(1) = K \implies K = 0$, valor que corresponde al caso hallado arriba.
+\[
+x\ln y = 0 \implies
+\]
+\[
+\boxed{y = 1}
+\]
+
+
+\noindent\textbf{8. Integrad la EDO: $\bm{y' = a^{x+y}}$ con $\bm{a>0}$ y $\bm{a \neq 1}$} \\
+$z = x+y \implies z' = 1+y' \implies y' = z'-1$.
+\begin{align*}
+z'-1 &= a^z \implies z' = 1+a^z \implies \frac{dz}{1+a^z} = dx
+\end{align*}
+$u = 1+a^z \implies du = a^z\ln(a)\,dz = (u-1)\ln(a)\,dz \implies dz = \dfrac{du}{(u-1)\ln a}$.
+\[
+\frac{dz}{1+a^z} = \frac{dz}{u} = \frac{du}{u(u-1)\ln a} = (\dfrac{1}{u-1}-\dfrac{1}{u})(\frac{du}{\ln a})
+\]
+
+\begin{align*}
+\int \frac{dz}{1+a^z} &= \frac{1}{\ln a}\int \left(\frac{1}{u-1}-\frac{1}{u}\right)du = \frac{1}{\ln a}\ln\left|\frac{u-1}{u}\right| \\
+\frac{1}{\ln a}\ln\left|\frac{u-1}{u}\right| &= x+C
+\end{align*}
+\textit{Como $a^z>0\ \forall z\in\mathbb{R}$, se tiene $u=1+a^z>1$ siempre, luego $u\neq0$ y $u-1=a^z\neq0$: ningún paso excluye soluciones.}
+
+\[
+\ln\left|\frac{a^z}{1+a^z}\right| = x\ln a + C_1 \implies \frac{a^z}{1+a^z} = Ka^x
+\]
+\begin{align*}
+a^z &= Ka^x(1+a^z) \implies a^z(1-Ka^x) = Ka^x \implies a^z = \frac{Ka^x}{1-Ka^x}
+\end{align*}
+
+\[
+a^xa^y = \frac{Ka^x}{1-Ka^x} \implies a^y = \frac{K}{1-Ka^x} \implies a^{-y} = \frac{1}{K}-a^x
+\]
+\textit{Como $a^x>0$ y $a^{-y}>0$ para todo $x,y\in\mathbb{R}$ (pues $a>0$), la constante $\dfrac1K$ debe ser positiva: no hay caso de singularidad ni de signo negativo.}
+\[
+\boxed{a^x + a^{-y} = K, \qquad K>0}
+\]
+
+
+\noindent\textbf{9. Integrad la EDO: $\bm{y' = \sin(x-y)}$} \\
+$z = x-y \implies z' = 1-y'$.
+\[
+1-z' = \sin(z) \implies z' = 1-\sin(z) \implies \frac{dz}{1-\sin(z)} = dx
+\]
+
+$u=\tan\left(\dfrac{z}{2}\right) \implies du = \dfrac{1+u^2}{2}\,dz \implies dz=\dfrac{2\,du}{1+u^2}$.\quad
+\begin{tikzpicture}[baseline={([yshift=-0.6ex]current bounding box.center)}, scale=0.5]
+\coordinate (A) at (0,0);
+\coordinate (B) at (3,0);
+\coordinate (C) at (3,2);
+\draw[thick] (A) -- (B) -- (C) -- cycle;
+\draw (A) ++(0.35,0) arc (0:33.7:0.35);
+\node at (0.62,0.17) {$z$};
+\node[below] at (1.5,0) {$1-u^2$};
+\node[right] at (3,1) {$2u$};
+\node[above, sloped] at (1.15,1) {$1+u^2$};
+\draw (2.85,0) -- (2.85,0.15) -- (3,0.15);
+\end{tikzpicture}
+
+\begin{align*}
+\sin(z) = \frac{2u}{1+u^2} \implies 1-\sin(z) &= \frac{(1-u)^2}{1+u^2} \implies \frac{dz}{1-\sin(z)} = \frac{2\,du}{(1-u)^2} \\
+\int \frac{2\,du}{(1-u)^2} &= \int dx \implies \frac{2}{1-u} = x + C
+\end{align*}
+
+\textit{Al dividir por $1-\sin(z)$ se excluye $\sin(z)=1$, es decir $z=x-y=\dfrac{\pi}{2}+2k\pi$; sustituyendo, $z'=1-\sin(\pi/2)=0$ concuerda con $z$ constante, luego $y=x-\dfrac{\pi}{2}-2k\pi$ es también solución.}
+\[
+\boxed{\frac{2}{1-\tan\left(\dfrac{x-y}{2}\right)} = x + C}
+\]
+
+
+\noindent\textbf{10. Integrad la EDO: $\bm{y' = ax+by+c}$ con $\bm{a, b, c}$ constantes} \\
+Cambio de variable: $z = ax+by+c \implies z' = a+by' \implies y' = \dfrac{z'-a}{b}$.
+\begin{align*}
+\frac{z'-a}{b} &= z \implies z' = a+bz \implies \frac{dz}{a+bz} = dx
+\end{align*}
+\textit{Con $b\neq0$ al dividir por $a+bz$ se excluye $z=-a/b$; en ese punto $z'=a+b(-a/b)=0$, consistente con $z$ constante, luego es también solución.}
+\begin{align*}
+\int \frac{dz}{a+bz} &= \int dx \\
+\frac{1}{b}\ln|a+bz| &= x + C_1 \implies a+bz = \pm K e^{bx}
+\end{align*}
+Se puede tomar cualquier signo según el signo de $a+bz$ será el elegido en el $\pm$ ; $K=0$ recupera el caso singular.
+\[
+\boxed{a+b(ax+by+c) = \pm K e^{bx}}
+\]
+
+
+\noindent\textbf{11. Integrad la EDO: $\bm{y+xy' = a(1+xy)}$ con la condición inicial $\bm{y(1/a)=-a}$} \\
+$z = xy \implies z' = y+xy'$.
+\begin{align*}
+z' &= a(1+z) \implies \frac{dz}{1+z} = a\,dx
+\end{align*}
+\textit{Al dividir por $1+z$ se excluye $z=-1$, es decir $xy=-1 \Leftrightarrow y=-1/x$. Comprobación en la ecuación original con $y=-1/x$, $y'=1/x^2$: $y+xy'=-\frac1x+\frac1x=0$ y $a(1+xy)=a(1-1)=0$, luego $y=-1/x$ es también solución, válida para \emph{cualquier} $a$.}
+\begin{align*}
+\int \frac{dz}{1+z} &= a\int dx \\
+\ln|1+z| &= ax + C \implies 1+z = K e^{ax} \implies 1+xy = K e^{ax}
+\end{align*}
+Aplicando $y(1/a)=-a \implies 1 + \frac{1}{a}(-a) = K e^{a(1/a)} \implies 0 = K e \implies K=0$, valor que coincide con el hallado arriba.
+\[
+1+xy = 0 \implies
+\]
+\[
+\boxed{y = -\frac{1}{x}}
+\]
+
+
+\noindent\textbf{12. Integrad la EDO: $\bm{y'+\sin(x-y)=\sin(x+y)}$ con la condición inicial $\bm{y(\pi)=\pi/2}$} \\
+Desarrollamos la diferencia de senos paso a paso:
+\begin{align*}
+\sin(x+y) &= \sin(x)\cos(y) + \cos(x)\sin(y) \\
+\sin(x-y) &= \sin(x)\cos(y) - \cos(x)\sin(y)
+\end{align*}
+\begin{align*}
+\sin(x+y) - \sin(x-y) &= \big[\sin(x)\cos(y) + \cos(x)\sin(y)\big] - \big[\sin(x)\cos(y) - \cos(x)\sin(y)\big] \\
+&= 2\cos(x)\sin(y)
+\end{align*}
+Por lo tanto:
+\begin{align*}
+y' &= 2\cos(x)\sin(y) \implies \frac{dy}{\sin(y)} = 2\cos(x)dx
+\end{align*}
+\textit{Al dividir por $\sin(y)$ se excluye $y=k\pi$; sustituyendo $y=k\pi$ (constante, $y'=0$) en la ecuación original: $\sin(x-k\pi)=\sin(x+k\pi)=\pm\sin(x)$ (mismo signo en ambos lados), por lo que $0+\sin(x-k\pi)=\sin(x+k\pi)$ se cumple, y $y=k\pi$ es también solución.}
+
+Para integrar $\int \csc(y)\,dy$ : $u=\tan\left(\dfrac{y}{2}\right) \implies dy=\dfrac{2\,du}{1+u^2},\ \sin(y)=\dfrac{2u}{1+u^2}$.
+\[
+\csc(y)\,dy = \frac{1+u^2}{2u}\cdot\frac{2\,du}{1+u^2} = \frac{du}{u}
+\]
+\begin{align*}
+\int \csc(y)\,dy &= \int \frac{du}{u} = \ln|u| = \ln\left|\tan\left(\frac{y}{2}\right)\right|
+\end{align*}
+\[
+\ln\left|\tan\left(\frac{y}{2}\right)\right| = 2\sin(x) + C
+\]
+Aplicando $y(\pi)=\pi/2 \implies \ln|\tan(\pi/4)| = 2\sin(\pi)+C \implies \ln(1) = C \implies C=0$.
+\[
+\boxed{\tan\left(\frac{y}{2}\right) = e^{2\sin(x)}}
+\]
+
+
+\noindent\textbf{13. Integrad la EDO: $\bm{(1+x^2)y' - \frac{1}{2}\cos^2(2y) = 0}$ con $\bm{y \to 7\pi/2}$ cuando $\bm{x \to -\infty}$} \\
+\begin{align*}
+\frac{2\,dy}{\cos^2(2y)} &= \frac{dx}{1+x^2}
+\end{align*}
+\textit{Al dividir por $\cos^2(2y)$ se excluye $\cos(2y)=0$, es decir $y=\dfrac{\pi}{4}+\dfrac{k\pi}{2}$; en ese caso $y'=0$ y la ecuación original $(1+x^2)\cdot0-\frac12\cdot0=0$ se cumple, luego esas rectas son también solución.}
+\begin{align*}
+\int 2\sec^2(2y)\,dy &= \int \frac{dx}{1+x^2} \\
+\tan(2y) &= \arctan(x) + C
+\end{align*}
+Límite $x \to -\infty \implies \arctan(x) \to -\pi/2$ e $y \to 7\pi/2$. \\
+$\tan(7\pi) = -\frac{\pi}{2} + C \implies 0 = -\frac{\pi}{2} + C \implies C = \frac{\pi}{2}$.
+\[
+\boxed{\tan(2y) = \arctan(x) + \frac{\pi}{2}}
+\]
+
+
+\noindent\textbf{14. Integrad la EDO: $\bm{y' = 2x(\pi+y)}$ con $\bm{y}$ acotada cuando $\bm{x \to +\infty}$} \\
+\begin{align*}
+\frac{dy}{\pi+y} &= 2x\,dx
+\end{align*}
+\textit{Al dividir por $\pi+y$ se excluye $y=-\pi$; sustituyendo, $y'=0$ y $2x(\pi-\pi)=0$ se cumple para todo $x$, luego $y=-\pi$ es solución.}
+\begin{align*}
+\int \frac{dy}{\pi+y} &= \int 2x\,dx \\
+\ln|\pi+y| &= x^2 + C \implies \pi+y = \pm K e^{x^2} \implies y = \pm K e^{x^2} - \pi
+\end{align*}
+Para que $y$ esté acotada cuando $x \to +\infty$, $K=0$
+\[
+\boxed{y = -\pi}
+\]
+
+
+\noindent\textbf{15. Integrad la EDO: $\bm{xy' = y + x\cos^2(y/x)}$} \\
+$z = \dfrac{y}{x} \implies y = zx \implies y' = z'x+z$.
+\begin{align*}
+z'x + z &= z + \cos^2(z) \implies z'x = \cos^2(z) \implies \frac{dz}{\cos^2(z)} = \frac{dx}{x}
+\end{align*}
+\textit{La división por $\cos^2(z)$ excluye $\cos(z)=0$, es decir $z=\dfrac{\pi}{2}+k\pi$; en ese punto $z'x=0$ es consistente con $z$ constante, luego $y=x\left(\dfrac{\pi}{2}+k\pi\right)$ es solución.}
+\begin{align*}
+\int \sec^2(z)\,dz &= \int \frac{dx}{x} \\
+\tan(z) &= \ln|x| + C
+\end{align*}
+\[
+\boxed{\tan\left(\frac{y}{x}\right) = \ln|x| + C}
+\]
+
+
+\noindent\textbf{16. Integrad la EDO: $\bm{xy' = y(\ln y - \ln x)}$} \\
+$z = \dfrac{y}{x} \implies y = zx \implies y' = z'x+z$; la ecuación se escribe $y' = z\ln(z)$.
+\begin{align*}
+z'x + z &= z\ln(z) \implies z'x = z(\ln(z)-1) \implies \frac{dz}{z(\ln(z)-1)} = \frac{dx}{x}
+\end{align*}
+\textit{El dominio exige $y>0$, es decir $z>0$. Al dividir por $\ln(z)-1$ se excluye $z=e$; en ese punto $z'x=e(1-1)=0$, consistente con $z$ constante, luego $y=ex$ es también solución.}
+
+$u = \ln(z)-1 \implies du = \dfrac{dz}{z}$.
+\begin{align*}
+\int \frac{du}{u} &= \int \frac{dx}{x} \\
+\ln|u| &= \ln|x| + C \implies \ln(z)-1 = Kx \implies \ln(y/x) = 1 + Kx
+\end{align*}
+$K=0$ da $y=xe^1=ex$, recuperando el caso anterior.
+\[
+\boxed{y = x\, e^{1+Kx}}
+\]
+
+
+\noindent\textbf{17. Integrad la EDO: $\bm{2x^2y' = x^2+y^2}$} \\
+$z = \dfrac{y}{x} \implies y = zx \implies y' = z'x+z$.
+\begin{align*}
+z'x + z &= \frac{1+z^2}{2} \implies z'x = \frac{(z-1)^2}{2} \implies \frac{2\,dz}{(z-1)^2} = \frac{dx}{x}
+\end{align*}
+\textit{Al dividir por $(z-1)^2$ se excluye $z=1$; en ese punto $z'x=0$, consistente con $z$ constante. Así, $y=x$ es también solución, pero \emph{no} está contenida en la familia general (correspondería a $C\to\pm\infty$ en la expresión final).}
+\begin{align*}
+\int \frac{2\,dz}{(z-1)^2} &= \int \frac{dx}{x} \\
+-\frac{2}{z-1} &= \ln|x| + C
+\end{align*}
+\[
+\boxed{\frac{2x}{x-y} = \ln|x| + C}
+\]
+
+
+\noindent\textbf{18. Integrad la EDO: $\bm{(4x-3y)dx + (2y-3x)dy = 0}$} \\
+$M=4x-3y$, $N=2y-3x$. $\dfrac{\partial M}{\partial y} = -3 = \dfrac{\partial N}{\partial x}$. Buscamos la función $f(x,y)$:
+\begin{align*}
+f(x,y) &= \int (4x-3y)\, dx = 2x^2 - 3xy + g(y) \\
+\frac{\partial f}{\partial y} &= -3x + g'(y) = 2y - 3x \implies g'(y) = 2y \implies g(y) = y^2 +K
+\end{align*}
+
+\[
+\boxed{2x^2 - 3xy + y^2 = C}
+\]
+
+
+\noindent\textbf{19. Integrad la EDO: $\bm{x+y-2 + (1-x)y' = 0}$} \\
+Escribimos la ecuación en forma $(x+y-2)dx + (1-x)dy = 0$\\
+$x=u+h$, $y=v+k$, y elegimos $h,k$ de modo que se anulen los términos independientes:
+\[
+\begin{cases} a_1 h + b_1 k + c_1 = 0 \\ a_2 h + b_2 k + c_2 = 0 \end{cases}
+\implies
+\begin{cases} h + k - 2 = 0 \\ -h + 1 = 0 \end{cases}
+\]
+Determinante del sistema:
+\[
+D = \begin{vmatrix} a_1 & b_1 \\ a_2 & b_2 \end{vmatrix} = \begin{vmatrix} 1 & 1 \\ -1 & 0 \end{vmatrix} = 1
+\]
+Como $D\neq 0$, el sistema tiene solución única. $h=k=1$.
+
+\[
+\frac{dv}{du} = \frac{u+v}{u} = 1+\frac{v}{u}
+\]
+$z = \dfrac{v}{u} \implies v=zu \implies \dfrac{dv}{du}=z'u+z$.
+\begin{align*}
+z'u+z &= 1+z \implies z'u = 1 \implies \int dz = \int \frac{du}{u} \implies z = \ln|u| + C
+\end{align*}
+\[
+\frac{y-1}{x-1} = \ln|x-1| + C
+\]
+\[
+\boxed{y = 1 + (x-1)\big(\ln|x-1| + C\big)}
+\]
+
+
+\noindent\textbf{20. Integrad la EDO: $\bm{(3y-7x+7)dx - (3x-7y-3)dy = 0}$} \\
+Analogamente al 19. :
+\[
+\begin{cases} a_1 h + b_1 k + c_1 = 0 \\ a_2 h + b_2 k + c_2 = 0 \end{cases}
+\implies
+\begin{cases} -7h + 3k = -7 \\ -3h + 7k = -3 \end{cases}
+\]
+Determinante del sistema:
+\[
+D = \begin{vmatrix} a_1 & b_1 \\ a_2 & b_2 \end{vmatrix} = \begin{vmatrix} -7 & 3 \\ -3 & 7 \end{vmatrix} = -49+9 = -40
+\]
+
+\[
+-49h+21k=-49, \qquad -9h+21k=-9 \implies -40h=-40 \implies h=1
+\]
+\[
+h=1, \qquad k=0
+\]
+
+\[
+\frac{dv}{du} = \frac{-7u+3v}{3u-7v} = \frac{-7+3(v/u)}{3-7(v/u)}
+\]
+$z = \dfrac{v}{u} \implies v=zu \implies \dfrac{dv}{du}=z'u+z$.
+\begin{align*}
+z'u+z &= \frac{3z-7}{3-7z} \implies z'u = \frac{3z-7-z(3-7z)}{3-7z} = \frac{7(z^2-1)}{3-7z}
+\end{align*}
+\textit{Al dividir por $u=x-1$ se excluye $x=1$, correspondiente al punto singular $(x,y)=(1,0)$ (el centro del sistema). Además, la división por $(3-7z)$ excluye $z=3/7$ (allí las curvas tienen tangente vertical, no es una solución). Por otro lado, cuando $z^2-1=0$ (es decir $z=\pm1$) se tiene $z'u=0$, consistente con $z$ constante:}
+\begin{itemize}
+\item $z=1 \Rightarrow v=u \Rightarrow y=x-1$. Comprobación: con $dy=dx$, $(3y-7x+7)-( 3x-7y-3)=(-4x+4)-(-4x+4)=0$ \checkmark.
+\item $z=-1 \Rightarrow v=-u \Rightarrow y=1-x$. Comprobación: con $dy=-dx$, $(3y-7x+7)+(3x-7y-3)=-4y-4x+4=0$ \checkmark.
+\end{itemize}
+Ambas rectas son, por tanto, soluciones singulares.
+
+\[
+\frac{3-7z}{7(z^2-1)}dz = (\dfrac{-2/7}{z-1} - \dfrac{5/7}{z+1} )dz = \frac{du}{u}
+\]
+
+\begin{align*}
+\int \left(\frac{-2/7}{z-1} - \frac{5/7}{z+1}\right)dz &= \int \frac{du}{u} \\
+-\frac{2}{7}\ln|z-1| - \frac{5}{7}\ln|z+1| &= \ln|u| + K_1 \\
+7\ln|u| + 2\ln|z-1| + 5\ln|z+1| &= C
+\end{align*}
+
+\[
+u^7\left(\frac{v}{u}-1\right)^2\left(\frac{v}{u}+1\right)^5 = C_2 \implies (v-u)^2(v+u)^5 = C_2
+\]
+\[
+\boxed{(y-x+1)^2(y+x-1)^5 = C_3}
+\]
+
+\separador
+\section{Hoja 2}
+
+\noindent\textbf{1. Integrad la EDO: $\bm{8x+4y+1+(4x+2y+1)y^{\prime}=0}$} \\
+$z = 4x+2y \implies z' = 4+2y' \implies y' = \dfrac{z'-4}{2}$.
+\begin{align*}
+2z+1 + (z+1)\frac{z'-4}{2} &= 0 \implies 2(2z+1) + (z+1)(z'-4) = 0 \\
+4z+2 + (z+1)z' - 4z - 4 &= 0 \implies (z+1)z' = 2 \implies (z+1)dz = 2dx
+\end{align*}
+\begin{align*}
+\int (z+1)dz &= \int 2dx \implies \frac{1}{2}z^2 + z = 2x + C_1 \implies z^2 + 2z = 4x + C
+\end{align*}
+\begin{align*}
+(4x+2y)^2 + 2(4x+2y) &= 4x + C \implies 16x^2 + 16xy + 4y^2 + 8x + 4y = 4x + C
+\end{align*}
+\[
+\boxed{(4x+2y)^2 + 4x + 4y = C}
+\]
+
+
+\noindent\textbf{2. Integrad la EDO: $\bm{(x-2y-1)dx+(3x-6y+2)dy=0}$} \\
+$z = x-2y \implies dx = dz + 2dy$.
+\begin{align*}
+(z-1)(dz + 2dy) + (3z+2)dy &= 0 \implies (z-1)dz + (2z-2+3z+2)dy = 0 \\
+(z-1)dz + 5z\,dy &= 0 \implies \left(1 - \frac{1}{z}\right)dz = -5dy
+\end{align*}
+\textit{Al dividir por $z$ se excluye $z=0$, es decir $x-2y=0 \implies x=2y \implies dx=2dy$. Sustituyendo $(-1)(2dy) + 2dy = 0$, luego $x-2y=0$ es solución.}
+\begin{align*}
+\int \left(1 - \frac{1}{z}\right)dz &= \int -5dy \implies z - \ln|z| = -5y + C_1 \\
+(x-2y) - \ln|x-2y| &= -5y + C_1 \implies x + 3y - \ln|x-2y| = C_1
+\end{align*}
+$\implies x-2y = \pm K e^{x+3y}$ con $K>0$; $K\geq 0$ incluye la $x=2y$.
+\[
+\boxed{x - 2y = \pm K e^{x+3y}, \qquad K \geq 0}
+\]
+
+
+\noindent\textbf{3. Integrad la EDO: $\bm{y^{\prime}+2y=e^{-x}}$} \\
+\begin{align*}
+y'_h + 2y_h &= 0 \implies \frac{dy_h}{y_h} = -2\,dx \implies \ln|y_h| = -2x + C_1 \implies y_h(x) = K e^{-2x}
+\end{align*}
+$y(x) = C(x) e^{-2x} \implies y' = C'(x) e^{-2x} - 2C(x) e^{-2x}$. \\
+\begin{align*}
+C'(x) e^{-2x} - 2C(x) e^{-2x} + 2C(x) e^{-2x} &= e^{-x} \implies C'(x) e^{-2x} = e^{-x} \implies C'(x) = e^x \\
+C(x) &= \int e^x dx = e^x + C
+\end{align*}
+\[
+\boxed{y(x) = e^{-x} + C e^{-2x}}
+\]
+
+
+\noindent\textbf{4. Integrad la EDO: $\bm{x^{2}+xy^{\prime}=y}$ con la condición inicial $\bm{y(x=1)=0}$} \\
+$y' - \frac{1}{x}y = -x$. \\
+\begin{align*}
+y'_h - \frac{1}{x}y_h &= 0 \implies \frac{dy_h}{y_h} = \frac{dx}{x} \implies \ln|y_h| = \ln|x| + C_1 \implies y_h(x) = Kx
+\end{align*}
+$y(x) = C(x)x \implies y' = C'(x)x + C(x)$. \\
+\begin{align*}
+C'(x)x + C(x) - \frac{1}{x}C(x)x &= -x \implies C'(x)x = -x \implies C'(x) = -1 \\
+C(x) &= -x + C_0 \implies y(x) = (C_0 - x)x = C_0 x - x^2
+\end{align*}
+\textit{Al dividir por $x$ se excluye $x=0$} \\
+$y(1)=0 \implies C_0(1) - 1^2 = 0 \implies C_0 = 1$.
+\[
+\boxed{y(x) = x - x^2}
+\]
+
+
+\noindent\textbf{5. Integrad la EDO: $\bm{y^{\prime}\cos x-y\sin x=2x}$ con la condición inicial $\bm{y(x=0)=0}$} \\
+Dividiendo por $\cos x$: $y' - y\tan x = \frac{2x}{\cos x}$. \\
+\begin{align*}
+y'_h - y_h\tan x &= 0 \implies \frac{dy_h}{y_h} = \tan x\,dx \implies \ln|y_h| = -\ln|\cos x| + C_1 \implies y_h(x) = K\sec x
+\end{align*}
+$y(x) = C(x)\sec x \implies y' = C'(x)\sec x + C(x)\sec x\tan x$. \\
+Sustituyendo en $y'\cos x - y\sin x = 2x$:
+\begin{align*}
+\big(C'(x)\sec x + C(x)\sec x\tan x\big)\cos x - C(x)\sec x\sin x &= 2x \implies C'(x) = 2x \\
+C(x) &= x^2 + C_0 \implies y(x) = (x^2 + C_0)\sec x
+\end{align*}
+\textit{La EDO presenta singularidades en $x = \frac{\pi}{2} + k\pi$ donde $\cos x = 0$.} \\
+$y(0)=0 \implies (0^2 + C_0)\sec(0) = 0 \implies C_0 = 0$.
+\[
+\boxed{y(x) = x^2 \sec x}
+\]
+
+
+\noindent\textbf{6. Integrad la EDO: $\bm{xy^{\prime}-2y=x^{3}\cos x}$} \\
+$y' - \frac{2}{x}y = x^2 \cos x$. \\
+\begin{align*}
+y'_h - \frac{2}{x}y_h &= 0 \implies \frac{dy_h}{y_h} = \frac{2}{x}dx \implies \ln|y_h| = 2\ln|x| + C_1 \implies y_h(x) = Kx^2
+\end{align*}
+$y(x) = C(x)x^2 \implies y' = C'(x)x^2 + 2C(x)x$. \\
+\begin{align*}
+x\big(C'(x)x^2 + 2C(x)x\big) - 2C(x)x^2 &= x^3 \cos x \implies C'(x)x^3 = x^3 \cos x \implies C'(x) = \cos x \\
+C(x) &= \sin x + C_0 \implies y(x) = (\sin x + C_0)x^2
+\end{align*}
+\textit{$y=0$ es solución.}
+\[
+\boxed{y(x) = x^2 \sin x + C x^2}
+\]
+
+
+\noindent\textbf{7. Integrad la EDO: $\bm{(2x-y^{2})y^{\prime}=2y}$} \\
+$P(x,y)dx + N(x,y)dy = 0$:
+\begin{align*}
+-2y\,dx + (2x-y^2)dy &= 0 \implies P(x,y) = -2y, \quad N(x,y) = 2x-y^2
+\end{align*}
+\begin{align*}
+\frac{\partial P}{\partial y} = -2 \neq \frac{\partial N}{\partial x} = 2 \implies \text{No es exacta.}
+\end{align*}
+$\mu(y)$:
+\begin{align*}
+\frac{\frac{\partial N}{\partial x} - \frac{\partial P}{\partial y}}{P} = \frac{2 - (-2)}{-2y} = -\frac{2}{y} \implies \mu(y) = e^{\int -\frac{2}{y}dy} = e^{-2\ln|y|} = \frac{1}{y^2}
+\end{align*}
+\begin{align*}
+-\frac{2}{y}dx + \left(\frac{2x}{y^2} - 1\right)dy &= 0
+\end{align*}
+Comprobación enla nueva EDO:
+\begin{align*}
+\tilde{P}(x,y) = -\frac{2}{y} \implies \frac{\partial \tilde{P}}{\partial y} = \frac{2}{y^2}, \qquad \tilde{N}(x,y) = \frac{2x}{y^2} - 1 \implies \frac{\partial \tilde{N}}{\partial x} = \frac{2}{y^2} \quad
+\end{align*}
+\begin{align*}
+F(x,y) &= \int \tilde{P}(x,y) dx = \int -\frac{2}{y}dx = -\frac{2x}{y} + g(y) \\
+\frac{\partial F}{\partial y} &= \frac{2x}{y^2} + g'(y) = \tilde{N}(x,y) = \frac{2x}{y^2} - 1 \implies g'(y) = -1 \implies g(y) = -y
+\end{align*}
+La solución implícita $F(x,y) = C_1$ es:
+\begin{align*}
+-\frac{2x}{y} - y = C_1 \implies 2x + y^2 = Ky
+\end{align*}
+\textit{Al dividir por $y^2$ para el factor integrante se excluye $y=0$. Sustituyendo $y\equiv 0$ ($y'=0$) en la EDO original: $(2x-0)\cdot 0 = 2(0)$ se cumple $\forall x$, luego $y=0$ es solución, recuperada con $K=0$.}
+\[
+\boxed{2x + y^2 = Ky}
+\]
+
+\noindent\textbf{8. Integrad la EDO: $\bm{y^{\prime}=\frac{y}{2y\ln y+y-x}}$} \\
+$\frac{dx}{dy} + \frac{1}{y}x = 2\ln y + 1$. \\
+
+\begin{align*}
+\frac{dx_h}{dy} + \frac{1}{y}x_h &= 0 \implies \frac{dx_h}{x_h} = -\frac{dy}{y} \implies x_h(y) = \frac{C_1}{y}
+\end{align*}
+$x(y) = \frac{C(y)}{y} \implies \frac{dx}{dy} = \frac{C'(y)y - C(y)}{y^2}$. \\
+\begin{align*}
+\frac{C'(y)y - C(y)}{y^2} + \frac{C(y)}{y^2} &= 2\ln y + 1 \implies \frac{C'(y)}{y} = 2\ln y + 1 \implies C'(y) = 2y\ln y + y \\
+C(y) &= \int (2y\ln y + y)dy = y^2\ln y - \frac{y^2}{2} + \frac{y^2}{2} + K = y^2\ln y + K
+\end{align*}
+\textit{El dominio pide $y > 0$}
+\[
+\boxed{x(y) = y\ln y + \frac{K}{y}}
+\]
+
+
+\noindent\textbf{9. Integrad la EDO: $\bm{(e^{-y^{2}/2}-xy)dy-dx=0}$} \\
+$\frac{dx}{dy} + yx = e^{-y^2/2}$. \\
+\begin{align*}
+\frac{dx_h}{dy} + yx_h &= 0 \implies \frac{dx_h}{x_h} = -y\,dy \implies x_h(y) = C_1 e^{-y^2/2}
+\end{align*}
+$x(y) = C(y)e^{-y^2/2} \implies \frac{dx}{dy} = C'(y)e^{-y^2/2} - C(y)y e^{-y^2/2}$. \\
+\begin{align*}
+C'(y)e^{-y^2/2} - C(y)y e^{-y^2/2} + y C(y)e^{-y^2/2} &= e^{-y^2/2} \implies C'(y) = 1 \implies C(y) = y + C
+\end{align*}
+\[
+\boxed{x e^{y^2/2} - y = C}
+\]
+
+
+\noindent\textbf{10. Integrad la EDO: $\bm{y^{\prime}-y\ln 2=2^{\sin x}(\cos x-1)\ln 2}$ con $\bm{y}$ acotada cuando $\bm{x\rightarrow+\infty}$} \\
+\begin{align*}
+y'_h - y_h\ln 2 &= 0 \implies \frac{dy_h}{y_h} = \ln 2\,dx \implies y_h(x) = K \cdot 2^x
+\end{align*}
+$y(x) = C(x) \cdot 2^x \implies y' = C'(x)2^x + C(x)2^x \ln 2$. \\
+\begin{align*}
+C'(x)2^x + C(x)2^x \ln 2 - C(x)2^x \ln 2 &= 2^{\sin x}(\cos x - 1)\ln 2 \implies C'(x) = 2^{\sin x - x}(\cos x - 1)\ln 2
+\end{align*}
+$u = \sin x - x \implies du = (\cos x - 1)dx$:
+\begin{align*}
+C(x) &= \int 2^u \ln 2\,du = 2^u + C_0 = 2^{\sin x - x} + C_0 \implies y(x) = 2^{\sin x} + C_0 \cdot 2^x
+\end{align*}
+
+\textit{El término $2^{\sin x}$ está acotado en $[1/2, 2]\ \forall x \in \mathbb{R}$. Analizando la acotación cuando $x \to +\infty$:}
+\begin{itemize}
+\item \textit{Si $C_0 > 0$, la función cumple acotación por abajo ($y(x) \geq 1/2$), pero diverge a $+\infty$ por arriba.}
+\item \textit{Si $C_0 < 0$, cumple acotación superior ($y(x) \leq 2$), pero diverge a $-\infty$ por abajo.}
+\item \textit{Por tanto, para asegurar acotación global (tanto superior como inferior) se requiere $C_0 = 0$.}
+\end{itemize}
+\[
+\boxed{y(x) = 2^{\sin x}}
+\]
+
+
+\noindent\textbf{11. Integrad la EDO: $\bm{y^{\prime}+2xy=2xy^{2}}$} \\
+$z = y^{-1} \implies z' = -y^{-2}y' \implies z' - 2xz = -2x$. \\
+\begin{align*}
+z'_h - 2xz_h &= 0 \implies \frac{dz_h}{z_h} = 2x\,dx \implies z_h(x) = K e^{x^2}
+\end{align*}
+$z(x) = C(x)e^{x^2} \implies z' = C'(x)e^{x^2} + 2xC(x)e^{x^2}$. \\
+\begin{align*}
+C'(x)e^{x^2} + 2xC(x)e^{x^2} - 2xC(x)e^{x^2} &= -2x \implies C'(x) = -2x e^{-x^2} \\
+C(x) &= e^{-x^2} + C_0 \implies z(x) = (e^{-x^2} + C_0)e^{x^2} = 1 + C_0 e^{x^2}
+\end{align*}
+\textit{Al dividir por $y^2$ se excluye $y=0$. $y\equiv 0$ en la EDO original, $0' + 2x(0) = 2x(0)^2$ se satisface $\forall x$, luego $y=0$ es solución (alcanzada para $C_0 \to \infty$).}
+\[
+\boxed{y(x) = \frac{1}{1 + C e^{x^2}}}
+\]
+
+
+\noindent\textbf{12. Integrad la EDO: $\bm{(x^{3}+e^{y})y^{\prime}=3x^{2}}$} \\
+$3x^2 \frac{dx}{dy} - x^3 = e^y$. \\
+$z = x^3 \implies \frac{dz}{dy} = 3x^2 \frac{dx}{dy} \implies \frac{dz}{dy} - z = e^y$. \\
+\begin{align*}
+\frac{dz_h}{dy} - z_h &= 0 \implies \frac{dz_h}{z_h} = dy \implies z_h(y) = K e^y
+\end{align*}
+$z(y) = C(y)e^y \implies \frac{dz}{dy} = C'(y)e^y + C(y)e^y$. \\
+\begin{align*}
+C'(y)e^y + C(y)e^y - C(y)e^y &= e^y \implies C'(y) = 1 \implies C(y) = y + C_0 \\
+z(y) &= (y + C_0)e^y \implies x^3 = (y + C_0)e^y
+\end{align*}
+\[
+\boxed{x^3 = (y+C)e^y}
+\]
+
+\noindent\textbf{13. Integrad la EDO: $\bm{y^{\prime}-2ye^{x}=2\sqrt{y}e^{x}}$} \\
+$n=1/2$. $z = \sqrt{y} \implies z' = \frac{1}{2}y^{-1/2}y' \implies z' - z e^x = e^x$. \\
+\begin{align*}
+z'_h - z_h e^x &= 0 \implies \frac{dz_h}{z_h} = e^x dx \implies z_h(x) = K e^{e^x}
+\end{align*}
+$z(x) = C(x)e^{e^x} \implies z' = C'(x)e^{e^x} + C(x)e^x e^{e^x}$. \\
+\begin{align*}
+C'(x)e^{e^x} + C(x)e^x e^{e^x} - C(x)e^x e^{e^x} &= e^x \implies C'(x) = e^x e^{-e^x} \\
+C(x) &= -e^{-e^x} + C_0 \implies z(x) = (C_0 - e^{-e^x})e^{e^x} = C_0 e^{e^x} - 1
+\end{align*}
+\textit{Al dividir por $\sqrt{y}$ se excluye $y=0$; $y\equiv 0$ es solución. Como $z = \sqrt{y} \geq 0$, exige la restricción $C e^{e^x} \geq 1$.}
+\[
+\boxed{y(x) = \left(C e^{e^x} - 1\right)^2, \qquad C e^{e^x} \geq 1}
+\]
+
+
+\noindent\textbf{14. Integrad la EDO: $\bm{2y^{\prime}\ln x+\frac{y}{x}=\frac{\cos x}{y}}$} \\
+$2y y' \ln x + \frac{y^2}{x} = \cos x$. \\
+$z = y^2 \implies z' = 2y y' \implies z' \ln x + \frac{z}{x} = \cos x$. \\
+\begin{align*}
+z'_h \ln x + \frac{z_h}{x} &= 0 \implies \frac{dz_h}{z_h} = -\frac{dx}{x\ln x} \implies \ln|z_h| = -\ln|\ln x| + C_1 \implies z_h(x) = \frac{K}{\ln x}
+\end{align*}
+Proponemos $z(x) = \frac{C(x)}{\ln x} \implies z' = \frac{C'(x)\ln x - C(x)/x}{\ln^2 x}$. \\
+Sustituyendo en la EDO reducida:
+\begin{align*}
+\left(\frac{C'(x)\ln x - C(x)/x}{\ln^2 x}\right)\ln x + \frac{C(x)}{x\ln x} &= \cos x \implies \frac{C'(x)}{\ln x} = \cos x \implies C'(x) = \cos x \\
+C(x) &= \sin x + C_0 \implies z(x) = \frac{\sin x + C_0}{\ln x}
+\end{align*}
+\textit{El dominio requiere $x > 0$, $x \neq 1$. La división por $y$ excluye $y=0$.}
+\[
+\boxed{y^2 = \frac{\sin x + C}{\ln x}}
+\]
+
+
+\noindent\textbf{15. Integrad la EDO: $\bm{2y^{\prime}\sin x+y\cos x=y^{3}\sin^{2}x}$} \\
+Bernoulli con $n=3$. $2y^{-3}y'\sin x + y^{-2}\cos x = \sin^2 x$. \\
+$z = y^{-2} \implies z' = -2y^{-3}y' \implies -z'\sin x + z\cos x = \sin^2 x$. \\
+\begin{align*}
+-z'_h \sin x + z_h \cos x &= 0 \implies \frac{dz_h}{z_h} = \cot x\,dx \implies z_h(x) = K \sin x
+\end{align*}
+$z(x) = C(x)\sin x \implies z' = C'(x)\sin x + C(x)\cos x$. \\
+\begin{align*}
+-\big(C'(x)\sin x + C(x)\cos x\big)\sin x + C(x)\sin x\cos x &= \sin^2 x \implies -C'(x)\sin^2 x = \sin^2 x \\
+C'(x) &= -1 \implies C(x) = C_0 - x \implies z(x) = (C_0 - x)\sin x
+\end{align*}
+\textit{Al dividir por $y^3$ se excluye $y=0$, que es solución }
+\[
+\boxed{y^2 = \frac{1}{(C - x)\sin x}}
+\]
+
+
+\noindent\textbf{16. Resolved mediante derivación la ecuación: $\bm{\int_{0}^{x}ty(t)dt=x^{2}y(x)}$} \\
+\begin{align*}
+x y(x) &= 2x y(x) + x^2 y'(x) \implies x^2 y'(x) + x y(x) = 0
+\end{align*}
+Con $x \neq 0$:
+\begin{align*}
+x y' + y = 0 \implies \frac{dy}{y} = -\frac{dx}{x} \implies \ln|y| = -\ln|x| + C_1
+\end{align*}
+\[
+\boxed{y(x) = \pm\frac{C}{x}, \qquad C>0}
+\]
+
+
+\noindent\textbf{17. Resolved mediante derivación la ecuación: $\bm{\int_{0}^{1}y(xt)dt=ny(x)}$} \\
+$u = xt \implies du = x\,dt \implies dt = \frac{du}{x}$.\\
+$t=0 \to u=0$, $t=1 \to u=x$.
+\begin{align*}
+\frac{1}{x} \int_{0}^{x} y(u) du &= n y(x) \implies \int_{0}^{x} y(u) du = n x y(x)
+\end{align*}
+\begin{align*}
+y(x) &= n \left[ y(x) + x y'(x) \right] \implies y(x) = n y(x) + n x y'(x) \\
+n x y'(x) &= (1-n) y(x) \implies \frac{dy}{y} = \frac{1-n}{n} \frac{dx}{x}
+\end{align*}
+$\ln|y| = \frac{1-n}{n}\ln|x| + C_1$.
+\[
+\boxed{y(x) = C x^{\frac{1-n}{n}}}
+\]
+
+
+\noindent\textbf{18. Integrad la EDO: $\bm{x(2x^{2}+y^{2})+y(x^{2}+2y^{2})y^{\prime}=0}$} \\
+$M(x,y)dx + N(x,y)dy = 0$:
+\begin{align*}
+(2x^3 + xy^2)dx + (x^2y + 2y^3)dy &= 0
+\end{align*}
+Comprobación de exacta: $\frac{\partial M}{\partial y} = 2xy = \frac{\partial N}{\partial x} \implies \text{Lo es, xd}$. \\
+\begin{align*}
+f(x,y) &= \int (2x^3 + xy^2)dx = \frac{1}{2}x^4 + \frac{1}{2}x^2y^2 + g(y) \\
+\frac{\partial f}{\partial y} &= x^2y + g'(y) = x^2y + 2y^3 \implies g'(y) = 2y^3 \implies g(y) = \frac{1}{2}y^4
+\end{align*}
+\[
+\boxed{x^4 + x^2y^2 + y^4 = C}
+\]
+
+
+\noindent\textbf{19. Integrad la EDO: $\bm{\left(\frac{x}{\sqrt{x^{2}+y^{2}}}+\frac{1}{x}+\frac{1}{y}\right)dx+\left(\frac{y}{\sqrt{x^{2}+y^{2}}}+\frac{1}{y}-\frac{x}{y^{2}}\right)dy=0}$} \\
+\begin{align*}
+\frac{\partial M}{\partial y} &= -\frac{xy}{(x^2+y^2)^{3/2}} - \frac{1}{y^2}, \qquad \frac{\partial N}{\partial x} = -\frac{xy}{(x^2+y^2)^{3/2}} - \frac{1}{y^2} \implies \text{Es exacta}
+\end{align*}
+\begin{align*}
+f(x,y) &= \int \left(\frac{x}{\sqrt{x^2+y^2}} + \frac{1}{x} + \frac{1}{y}\right) dx = \sqrt{x^2+y^2} + \ln|x| + \frac{x}{y} + g(y) \\
+\frac{\partial f}{\partial y} &= \frac{y}{\sqrt{x^2+y^2}} - \frac{x}{y^2} + g'(y) = \frac{y}{\sqrt{x^2+y^2}} + \frac{1}{y} - \frac{x}{y^2} \implies g'(y) = \frac{1}{y} \implies g(y) = \ln|y|
+\end{align*}
+\textit{El dominio de la EDO requiere $x \neq 0$ y $y \neq 0$.}
+\[
+\boxed{\sqrt{x^2+y^2} + \ln|xy| + \frac{x}{y} = C}
+\]
+
+
+\noindent\textbf{20. Integrad la EDO: $\bm{\left(3x^{2}\tan y-\frac{2y^{3}}{x^{3}}\right)dx+\left(x^{3}\sec^{2}y+4y^{3}+\frac{3y^{2}}{x^{2}}\right)dy=0}$} \\
+\begin{align*}
+\frac{\partial M}{\partial y} &= 3x^2\sec^2 y - \frac{6y^2}{x^3}, \qquad \frac{\partial N}{\partial x} = 3x^2\sec^2 y - \frac{6y^2}{x^3} \implies \text{Otra vez exacta}\\
+f(x,y) &= \int \left(3x^2\tan y - \frac{2y^3}{x^3}\right) dx = x^3\tan y + \frac{y^3}{x^2} + g(y) \\
+\frac{\partial f}{\partial y} &= x^3\sec^2 y + \frac{3y^2}{x^2} + g'(y) = x^3\sec^2 y + 4y^3 + \frac{3y^2}{x^2} \implies g'(y) = 4y^3 \implies g(y) = y^4
+\end{align*}
+\textit{El dominio pide $x \neq 0$ y $y \neq \frac{\pi}{2} + k\pi$.}
+\[
+\boxed{x^3\tan y + \frac{y^3}{x^2} + y^4 = C}
+\]
+
+\separador
+\section{Hoja 3}
+
+\noindent\textbf{1. Integrad la EDO: $\bm{(x^4\ln x - 2xy^3)dx + 3x^2y^2dy = 0}$} \\
+$M(x,y) = x^4\ln x - 2xy^3$ y $N(x,y) = 3x^2y^2$:
+\begin{align*}
+\frac{\partial M}{\partial y} = -6xy^2, \qquad \frac{\partial N}{\partial x} = 6xy^2 \implies \text{No es exacta.}
+\end{align*}
+\begin{align*}
+\frac{\partial}{\partial y}\big(M(x,y)\mu(x)\big) = \frac{\partial}{\partial x}\big(N(x,y)\mu(x)\big)
+\end{align*}
+\begin{align*}
+\mu(x)\frac{\partial M}{\partial y} &= \mu'(x)N(x,y) + \mu(x)\frac{\partial N}{\partial x}
+\end{align*}
+\begin{align*}
+\mu(x)(-6xy^2) &= \mu'(x)(3x^2y^2) + \mu(x)(6xy^2)
+\end{align*}
+\begin{align*}
+\mu'(x) &= \frac{-12xy^2}{3x^2y^2} \, \mu(x) \implies \mu'(x) = -\frac{4}{x} \, \mu(x)\implies \mu(x) = e^{\int -\frac{4}{x}dx} = \frac{1}{x^4}
+\end{align*}
+
+Comprobamos la exactitud de la nueva EDO:
+\begin{align*}
+\frac{\partial}{\partial y}\big(M(x,y)\mu(x)\big) &= \frac{\partial}{\partial y}\left(\ln x - \frac{2y^3}{x^3}\right) = -\frac{6y^2}{x^3} \\
+\frac{\partial}{\partial x}\big(N(x,y)\mu(x)\big) &= \frac{\partial}{\partial x}\left(\frac{3y^2}{x^2}\right) = -\frac{6y^2}{x^3}
+\end{align*}
+Integrando $\tilde{N} = \frac{3y^2}{x^2}$ respecto de $y$ obtenemos $f(x,y) = \frac{y^3}{x^2} + h(x)$. Derivando e igualando a $\tilde{M}$:
+\begin{align*}
+\frac{\partial f}{\partial x} = -\frac{2y^3}{x^3} + h'(x) = \ln x - \frac{2y^3}{x^3} \implies h'(x) = \ln x \implies h(x) = x(\ln x - 1)
+\end{align*}
+\[
+\boxed{\frac{y^3}{x^2} + x\ln x - x = C}
+\]
+
+\noindent\textbf{2. Integrad la EDO: $\bm{(x+\sin x+\sin y)dx + \cos y \, dy = 0}$} \\
+$M(x,y) = x+\sin x+\sin y$ y $N(x,y) = \cos y$:
+\begin{align*}
+\frac{\partial M}{\partial y} = \cos y, \qquad \frac{\partial N}{\partial x} = 0 \implies \text{No es exacta.}
+\end{align*}
+\begin{align*}
+\frac{\partial}{\partial y}\big(M(x,y)\mu(x)\big) = \frac{\partial}{\partial x}\big(N(x,y)\mu(x)\big)
+\end{align*}
+\begin{align*}
+\mu(x)\cos y &= \mu'(x)\cos y + \mu(x)(0)
+\end{align*}
+\begin{align*}
+\mu'(x) = \mu(x) \implies \mu(x) = e^x
+\end{align*}
+
+Comprobamos la exactitud de la nueva EDO:
+\begin{align*}
+\left.\begin{aligned}
+\frac{\partial \tilde{M}}{\partial y} &= \frac{\partial}{\partial y}\big(e^x(x+\sin x+\sin y)\big) = e^x\cos y \\[1.5ex]
+\frac{\partial \tilde{N}}{\partial x} &= \frac{\partial}{\partial x}(e^x\cos y) = e^x\cos y
+\end{aligned}\right\} \implies \text{Oh sorpresa, es exacta.}
+\end{align*}
+Integrando $\tilde{N} = e^x\cos y$ respecto de $y$ tenemos $f(x,y) = e^x\sin y + h(x)$. Derivando e igualando a $\tilde{M}$:
+\begin{align*}
+\frac{\partial f}{\partial x} = e^x\sin y + h'(x) = e^x(x+\sin x+\sin y) \implies h'(x) = e^x(x+\sin x)
+\end{align*}
+Integrando $h'(x)$ por partes:
+\begin{align*}
+h(x) = \int e^x(x+\sin x) dx = e^x(x-1) + \frac{e^x(\sin x - \cos x)}{2}
+\end{align*}
+\[
+\boxed{\sin y + x - 1 + \frac{\sin x - \cos x}{2} = C e^{-x}}
+\]
+
+
+\noindent\textbf{3. Integrad la EDO: $\bm{y = (y')^2 e^{y'}}$} \\
+$y' = p \implies y = p^2 e^p$. Diferenciando $y$:
+\begin{align*}
+\frac{dy}{dp} &= (2pe^p + p^2 e^p)dp = p(p+2)e^p
+\end{align*}
+Como $dy = p dx$, ($p\neq 0$):
+\begin{align*}
+p dx &= p(p+2)e^p dp \implies dx = (p+2)e^p dp \\
+x &= \int (p+2)e^p dp = (p+1)e^p + C
+\end{align*}
+\textit{Para $p=0$ se obtiene la solución $y=0$ (recuperada en el límite).}
+\[
+\boxed{\begin{cases} x = (p+1)e^p + C \\ y = p^2 e^p \end{cases}}
+\]
+
+
+\noindent\textbf{4. Integrad la EDO: $\bm{x = \ln y' + \sin y'}$} \\
+$y' = p \implies x = \ln p + \sin p$
+\begin{align*}
+dx &= \left(\frac{1}{p} + \cos p\right)dp
+\end{align*}
+haciendo $dy = p dx$:
+\begin{align*}
+dy &= p\left(\frac{1}{p} + \cos p\right)dp = (1 + p\cos p)dp \\
+y &= \int (1 + p\cos p)dp = p + p\sin p + \cos p + C
+\end{align*}
+\[
+\boxed{\begin{cases} x = \ln p + \sin p \\ y = p + p\sin p + \cos p + C \end{cases}}
+\]
+
+
+\noindent\textbf{5. Integrad la EDO: $\bm{x(1+(y')^2)^{3/2} = a}$} \\
+$y' = p \implies x = \dfrac{a}{(1+p^2)^{3/2}}$. Diferenciando $x$:
+\begin{align*}
+dx &= -\frac{3ap}{(1+p^2)^{5/2}}dp
+\end{align*}
+Como $dy = p dx$:
+\begin{align*}
+dy &= -\frac{3ap^2}{(1+p^2)^{5/2}}dp \implies y = -3a\int \frac{p^2}{(1+p^2)^{5/2}}dp
+\end{align*}
+$p = \tan\theta \implies dp = \sec^2\theta \, d\theta$, con lo que $x = a\cos^3\theta$
+
+\begin{align*}
+y &= -3a\int \sin^2\theta\cos\theta \, d\theta = C - a\sin^3\theta
+\end{align*}
+\[
+\boxed{\begin{cases} x = a\cos^3\theta \\[1ex] y = C - a\sin^3\theta \end{cases}}
+\]
+
+\noindent\textbf{6. Integrad la EDO: $\bm{x = y' + \sin y'}$} \\
+$y' = p \implies x = p + \sin p$.
+\begin{align*}
+dx &= (1 + \cos p)dp \quad\quad dy = p dx
+\end{align*}
+
+\begin{align*}
+dy &= p(1 + \cos p)dp = (p + p\cos p)dp \\
+y &= \int (p + p\cos p)dp = \frac{p^2}{2} + p\sin p + \cos p + C
+\end{align*}
+\[
+\boxed{\begin{cases} x = p + \sin p \\ y = \dfrac{p^2}{2} + p\sin p + \cos p + C \end{cases}}
+\]
+
+
+\noindent\textbf{7. Integrad la EDO: $\bm{y = 2xy' + \ln y'}$} \\
+$y' = p \implies y = 2xp + \ln p$.
+\begin{align*}
+dy &= 2p dx + 2xdp + \frac{1}{p}dp
+\end{align*}
+Sustituyendo $dy = pdx$:
+\begin{align*}
+p dx &= 2p dx + \left(2x + \frac{1}{p}\right)dp \implies \frac{dx}{dp} + \frac{2}{p}x = -\frac{1}{p^2}
+\end{align*}
+\textit{$x_h = \dfrac{K}{p^2}$ y variando la constante $x(p) = \dfrac{C-p}{p^2}$. Sustituyendo en la expresión de $y(p)$:}
+\[
+\boxed{\begin{cases} x = \dfrac{C-p}{p^2} \\[2ex] y = \dfrac{2(C-p)}{p} + \ln p \end{cases}}
+\]
+
+
+\noindent\textbf{8. Integrad la EDO: $\bm{y = 2xy' + \sin y'}$} \\
+$y' = p \implies y = 2xp + \sin p$.
+\begin{align*}
+dy &= 2p dx + 2xdp + \cos p \, dp \qquad dy = pdx 
+\end{align*}
+\begin{align*}
+p dx &= 2p dx + (2x + \cos p)dp \implies \frac{dx}{dp} + \frac{2}{p}x = -\frac{\cos p}{p}
+\end{align*}
+\textit{Resolvemos la lineal, $x_h = \dfrac{K(p)}{p^2}$ y $x(p) = \dfrac{C - p\sin p - \cos p}{p^2}$.}
+\[
+\boxed{\begin{cases} x = \dfrac{C - p\sin p - \cos p}{p^2} \\[2ex] y = \dfrac{2(C - \cos p)}{p} - \sin p \end{cases}}
+\]
+
+
+\noindent\textbf{9. Integrad la EDO: $\bm{y = x(y')^2 - \frac{1}{y'}}$} \\
+$y' = p \implies y = xp^2 - \frac{1}{p}$.
+\begin{align*}
+dy &= p^2 dx + 2xp \, dp + \frac{1}{p^2}dp \qquad dy=pdx
+\end{align*}
+\begin{align*}
+p dx &= p^2 dx + \left(2xp + \frac{1}{p^2}\right)dp \implies \frac{dx}{dp} - \frac{2}{1-p}x = \frac{1}{p^3(1-p)}
+\end{align*}
+\textit{Resolviendo la lineal, $x(p) = \dfrac{2Cp^2 + 2p - 1}{2p^2(1-p)^2}$. Además, $p=1 \implies y = x-1$ constituye una solución singular.}
+\[
+\boxed{\begin{cases} x = \dfrac{2Cp^2 + 2p - 1}{2p^2(1-p)^2} \\[2ex] y = \dfrac{2Cp^2 + 2p - 1}{2(1-p)^2} - \dfrac{1}{p} \end{cases}}
+\]
+
+
+\noindent\textbf{10. Integrad la EDO: $\bm{y = xy' + \frac{a}{(y')^2}}$} \\
+$y' = p \implies y = xp + \frac{a}{p^2}$.
+\begin{align*}
+dy &= pdx + xdp - \frac{2a}{p^3}dp \implies pdx = pdx + \left(x - \frac{2a}{p^3}\right)dp \implies \left(x - \frac{2a}{p^3}\right)dp = 0
+\end{align*}
+\begin{itemize}
+\item $dp = 0 \implies p = C \implies$ Solución general:
+\[
+\boxed{y = Cx + \frac{a}{C^2}}
+\]
+\item $x - \dfrac{2a}{p^3} = 0 \implies p = \left(\dfrac{2a}{x}\right)^{1/3} \implies y = 3\left(\dfrac{ax^2}{4}\right)^{1/3} \implies$ Solución singular:
+\[
+\boxed{4y^3 = 27ax^2}
+\]
+\end{itemize}
+
+
+\noindent\textbf{11. Integrad la EDO: $\bm{x(y')^2 - yy' - y' + 1 = 0}$} \\
+Hacemos $y' = p$:
+\begin{align*}
+xp^2 - yp - p + 1 = 0 \implies y = xp - 1 + \frac{1}{p}
+\end{align*}
+\textit{$dy = pdx + xdp - \frac{1}{p^2}dp \implies \left(x - \frac{1}{p^2}\right)dp = 0$.}
+\begin{itemize}
+\item $dp = 0 \implies p = C \implies$ Solución general:
+\[
+\boxed{y = Cx + \frac{1}{C} - 1}
+\]
+\item $x - \dfrac{1}{p^2} = 0 \implies p = \dfrac{1}{\sqrt{x}} \implies y = 2\sqrt{x} - 1 \implies$ Solución particular:
+\[
+\boxed{(y+1)^2 = 4x}
+\]
+\end{itemize}
+
+
+\noindent\textbf{12. Integrad la EDO de Riccati: $\bm{y'e^{-x} + y^2 - 2ye^x = 1 - e^{2x}}$ sabiendo la solución $\bm{y_1 = e^x}$} \\
+$y = y_1 + z = e^x + z \implies y' = e^x + z'$. Sustituyendo:
+\begin{align*}
+(e^x + z')e^{-x} + (e^x+z)^2 - 2(e^x+z)e^x &= 1 - e^{2x} \\
+1 + z'e^{-x} + e^{2x} + 2ze^x + z^2 - 2e^{2x} - 2ze^x &= 1 - e^{2x} \implies z'e^{-x} + z^2 = 0
+\end{align*}
+\begin{align*}
+\frac{dz}{z^2} &= -e^x dx \implies -\frac{1}{z} = -e^x - C \implies z = \frac{1}{e^x + C}
+\end{align*}
+\[
+\boxed{y(x) = e^x + \frac{1}{e^x + C}}
+\]
+
+
+\noindent\textbf{13. Hallad la solución general de la EDO de Riccati cuando $\bm{a(x):b(x):c(x) = m:n:p}$} \\
+Como los coeficientes son proporcionales a constantes $m,n,p$, podemos usar $\phi(x)$ tal que $a(x) = m\phi(x)$, $b(x) = n\phi(x)$ y $c(x) = p\phi(x)$. La EDO es de variables separables:
+\begin{align*}
+y' + \phi(x)\big(my^2 + ny + p\big) = 0 \implies \frac{dy}{my^2 + ny + p} = -\phi(x)dx
+\end{align*}
+Definimos el discriminante $\Delta = n^2 - 4mp$:
+\begin{itemize}
+\item \textbf{ $\bm{\Delta > 0}$:} Existen dos raíces reales distintas $r_1, r_2 = \frac{-n \pm \sqrt{\Delta}}{2m}$. \\
+\begin{align*}
+\frac{1}{m(y-r_1)(y-r_2)} &= \frac{A}{y-r_1} + \frac{B}{y-r_2} \implies 1 = m\big[A(y-r_2) + B(y-r_1)\big]
+\end{align*}
+\begin{align*}
+A &= \frac{1}{m(r_1 - r_2)} = \frac{1}{\sqrt{\Delta}}, \qquad B = \frac{1}{m(r_2 - r_1)} = -\frac{1}{\sqrt{\Delta}}
+\end{align*}
+\begin{align*}
+\int \left( \frac{1/\sqrt{\Delta}}{y-r_1} - \frac{1/\sqrt{\Delta}}{y-r_2} \right) dy &= -\int \phi(x)dx \\
+\frac{1}{\sqrt{\Delta}}\left(\ln|y-r_1| - \ln|y-r_2|\right) &= -\int \phi(x)dx + C_1 \implies \frac{1}{\sqrt{\Delta}}\ln\left|\frac{y-r_1}{y-r_2}\right| = -\int \phi(x)dx + C_1
+\end{align*}
+\[
+\boxed{\frac{y-r_1}{y-r_2} = K e^{-\sqrt{\Delta}\int \phi(x)dx}}
+\]
+
+\item \textbf{$\bm{\Delta = 0}$:} raíz real doble $r = -\frac{n}{2m}$.
+\begin{align*}
+\int \frac{dy}{m(y + \frac{n}{2m})^2} &= -\int \phi(x)dx \implies -\frac{2}{2my+n} = -\int \phi(x)dx - C
+\end{align*}
+\[
+\boxed{\frac{2}{2my+n} = \int \phi(x)dx + C}
+\]
+
+\item \textbf{Caso $\bm{\Delta < 0}$:} No existen raíces reales. Completando el cuadrado en el denominador:
+\begin{align*}
+my^2 + ny + p = m\left[\left(y + \frac{n}{2m}\right)^2 + \frac{4mp-n^2}{4m^2}\right] = m\left[\left(y + \frac{n}{2m}\right)^2 + \frac{-\Delta}{4m^2}\right]
+\end{align*}
+Metiendo la integral en calculadora de integrales:
+\begin{align*}
+\int \frac{dy}{m\left[\left(y + \frac{n}{2m}\right)^2 + \left(\frac{\sqrt{-\Delta}}{2m}\right)^2\right]} &= -\int \phi(x)dx \\
+\frac{2}{\sqrt{-\Delta}}\arctan\left(\frac{2my+n}{\sqrt{-\Delta}}\right) &= -\int \phi(x)dx + C_1
+\end{align*}
+\[
+\boxed{\arctan\left(\frac{2my+n}{\sqrt{-\Delta}}\right) = \frac{\sqrt{-\Delta}}{2}\left(C - \int \phi(x)dx\right)}
+\]
+\end{itemize}
+
+\noindent\textbf{14. Construid la EDO de la familia de curvas: $\bm{y^2 = 2Cx + C^2}$} \\
+\begin{align*}
+2yy' = 2C \implies C = yy'
+\end{align*}
+\begin{align*}
+y^2 = 2x(yy') + (yy')^2 \implies y^2 = 2xyy' + y^2(y')^2
+\end{align*}
+Dividiendo entre $y$ ($y \neq 0$):
+\[
+\boxed{y(y')^2 + 2xy' - y = 0}
+\]
+
+
+\noindent\textbf{15. Construid la EDO de la familia de curvas: $\bm{y = ax^2 + bx + c}$} \\
+Como la familia tiene 3 parámetros constantes ($a, b, c$), derivamos 3 veces:
+\begin{align*}
+y' &= 2ax + b \\
+y'' &= 2a \\
+y''' &= 0
+\end{align*}
+\[
+\boxed{y''' = 0}
+\]
+
+
+\noindent\textbf{16. Construid la EDO de la familia de curvas: $\bm{y = C_1 x + C_2/x + C_3}$} \\
+Como vimos en clase:
+\begin{align*}
+y' &= C_1 - \frac{C_2}{x^2} \\
+y'' &= \frac{2C_2}{x^3} \implies C_2 = \frac{x^3 y''}{2} \\
+y''' &= -\frac{6C_2}{x^4}
+\end{align*}
+\begin{align*}
+y''' = -\frac{6}{x^4}\left(\frac{x^3 y''}{2}\right) = -\frac{3y''}{x} \implies xy''' + 3y'' = 0
+\end{align*}
+\[
+\boxed{xy''' + 3y'' = 0}
+\]
+
+
+\noindent\textbf{17. Hallad las trayectorias ortogonales a la familia de curvas: $\bm{y^2 + 2ax = 0}$ con $\bm{a>0}$} \\
+Despejamos $a = -\frac{y^2}{2x}$ y derivamos la familia $2yy' + 2a = 0 \implies a = -yy'$.
+Igualando ambas expresiones de $a$ obtenemos la EDO de la familia original:
+\begin{align*}
+-yy' = -\frac{y^2}{2x} \implies y' = \frac{y}{2x}
+\end{align*}
+$y \to \tilde{y}$ y $y' \to -\frac{1}{\tilde{y}'}$:
+\begin{align*}
+-\frac{1}{\tilde{y}'} = \frac{\tilde{y}}{2x} \implies \tilde{y}' = -\frac{2x}{\tilde{y}} \implies \tilde{y} \, d\tilde{y} = -2x \, dx
+\end{align*}
+$\frac{\tilde{y}^2}{2} = -x^2 + C_1 \implies 2x^2 + \tilde{y}^2 = C$.
+\[
+\boxed{2x^2 + \tilde{y}^2 = C, \qquad C > 0}
+\]
+
+
+\noindent\textbf{18. Hallad las trayectorias ortogonales a la familia de curvas: $\bm{y = ax^n}$ con $\bm{n}$ fijo} \\
+Despejamos $a = \frac{y}{x^n}$ y derivamos $y' = nax^{n-1} = n\left(\frac{y}{x^n}\right)x^{n-1} = \frac{ny}{x}$. \\
+EDO de la familia original: $y' = \frac{ny}{x}$. \\
+$y \to \tilde{y}$ y $y' \to -\frac{1}{\tilde{y}'}$:
+\begin{align*}
+-\frac{1}{\tilde{y}'} = \frac{n\tilde{y}}{x} \implies \tilde{y}' = -\frac{x}{n\tilde{y}} \implies n\tilde{y} \, d\tilde{y} = -x \, dx
+\end{align*}
+$\frac{n\tilde{y}^2}{2} = -\frac{x^2}{2} + C_1$.
+\[
+\boxed{x^2 + n\tilde{y}^2 = C}
+\]
+
+
+\noindent\textbf{19. Hallad las trayectorias ortogonales a la familia de curvas: $\bm{y = ae^{kx}}$ con $\bm{k}$ fijo} \\
+$y' = kae^{kx} = ky$. La EDO de la familia es $y' = ky$. \\
+$y \to \tilde{y}$ y $y' \to -\frac{1}{\tilde{y}'}$:
+\begin{align*}
+-\frac{1}{\tilde{y}'} = k\tilde{y} \implies \tilde{y}' = -\frac{1}{k\tilde{y}} \implies k\tilde{y} \, d\tilde{y} = -dx
+\end{align*}
+$\frac{k\tilde{y}^2}{2} = -x + C_1 \implies k\tilde{y}^2 + 2x = C$.
+\[
+\boxed{k\tilde{y}^2 + 2x = C}
+\]
+
+
+\noindent\textbf{20. Hallad las trayectorias ortogonales a la familia de curvas: $\bm{\cos y = ae^{-x}}$} \\
+$-\sin y \cdot y' = -ae^{-x} = -\cos y \implies y' = \cot y$. \\
+$y \to \tilde{y}$ y $y' \to -\frac{1}{\tilde{y}'}$:
+\begin{align*}
+-\frac{1}{\tilde{y}'} = \cot \tilde{y} \implies \tilde{y}' = -\tan \tilde{y} \implies \frac{d\tilde{y}}{\tan \tilde{y}} = -dx \implies \cot \tilde{y} \, d\tilde{y} = -dx
+\end{align*}
+Integrando: $\ln|\sin \tilde{y}| = -x + C_1 \implies |\sin \tilde{y}| = e^{-x+C_1} = C e^{-x}$.
+\[
+\boxed{\sin \tilde{y} = C e^{-x}}
+\]
+\separador
+\section{Hoja 4}
+
+\end{document}

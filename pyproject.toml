@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "edoviz"
+version = "0.1.0"
+description = "Gráficas de familias de soluciones de EDOs (curvas integrales, paramétricas, trayectorias ortogonales)"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = ["numpy", "matplotlib", "scipy", "contourpy"]
+
+[project.optional-dependencies]
+notebook = ["ipywidgets", "jupyter"]
+check = ["sympy"]
+dev = ["pytest", "sympy", "nbformat", "nbclient", "ipykernel", "ipywidgets"]
+
+[tool.setuptools]
+packages = ["edoviz"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

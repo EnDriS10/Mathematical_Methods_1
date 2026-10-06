@@ -1,0 +1,10 @@
+numpy
+matplotlib
+scipy
+contourpy
+sympy
+ipywidgets
+jupyter
+pytest
+nbformat
+nbclient
