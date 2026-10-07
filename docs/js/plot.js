@@ -118,7 +118,7 @@
       actions.append(
         el('button', { type: 'button', onclick: () => { s.consts.forEach((c) => (this.env[c.name] = c.value)); this.syncSliders(); this.resetView(); this.draw(); } }, 'Restablecer'),
         el('button', { type: 'button', onclick: () => this.download() }, 'Descargar PNG'));
-      const hint = this.canPick() ? el('p', { class: 'hint' }, 'Haz clic en el gráfico para elegir la curva que pasa por ese punto. Rueda para ampliar, arrastra para mover.')
+      const hint = this.canPick() ? el('p', { class: 'hint' }, 'Toca o haz clic en el gráfico para elegir la curva que pasa por ese punto. Rueda para ampliar, arrastra para mover.')
                                  : el('p', { class: 'hint' }, 'Rueda para ampliar, arrastra para mover.');
       root.append(this.stage, this.legend, tools, this.controls, actions, hint);
       this.bindPointer();
@@ -140,7 +140,7 @@
     resize() {
       const w = Math.max(240, this.stage.clientWidth || 480);
       const win = this.spec.window, ratio = (win[3] - win[2]) / (win[1] - win[0]);
-      const r = this.spec.aspect === 'equal' ? Math.min(1.05, Math.max(0.6, ratio)) : 0.72;
+      const r = this.spec.aspect === 'equal' ? Math.min(1.05, Math.max(0.6, ratio)) : (w < 520 ? 0.92 : 0.72);
       this.cssW = w; this.cssH = Math.round(w * r);
       const dpr = window.devicePixelRatio || 1;
       this.canvas.width = Math.round(this.cssW * dpr); this.canvas.height = Math.round(this.cssH * dpr);
@@ -428,7 +428,7 @@
     bindPointer() {
       const cv = this.canvas; let drag = null; const pts = new Map();
       const pos = (e) => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
-      cv.style.touchAction = 'none';
+      cv.style.touchAction = 'pan-y pinch-zoom';
       cv.addEventListener('pointerdown', (e) => { cv.setPointerCapture(e.pointerId); const [px, py] = pos(e); drag = { px, py, v: Object.assign({}, this.view), moved: false }; });
       cv.addEventListener('pointermove', (e) => {
         const [px, py] = pos(e);
@@ -443,6 +443,7 @@
       });
       cv.addEventListener('pointerup', (e) => { if (drag && !drag.moved) { const [px, py] = pos(e); this.pick(this.ux(px), this.uy(py)); } drag = null; });
       cv.addEventListener('pointerleave', () => { this.readout.style.opacity = 0; });
+      cv.addEventListener('pointercancel', () => { drag = null; });
       cv.addEventListener('wheel', (e) => {
         e.preventDefault(); const [px, py] = pos(e), f = Math.exp(Math.sign(e.deltaY) * 0.15), x = this.ux(px), y = this.uy(py), v = this.view;
         this.view = { x0: x - (x - v.x0) * f, x1: x + (v.x1 - x) * f, y0: y - (y - v.y0) * f, y1: y + (v.y1 - y) * f }; this.draw();
