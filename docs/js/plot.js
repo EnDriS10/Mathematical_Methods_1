@@ -35,7 +35,7 @@
       this.levelNames = spec.consts.filter((c) => c.role === 'level').map((c) => c.name);
       this.defs = spec.defs || [];
       this.env = {}; spec.consts.forEach((c) => (this.env[c.name] = c.value));
-      this.opts = { family: true, field: false, extras: true, particular: true };
+      this.opts = { family: true, selected: true, numeric: false, field: false, extras: true, particular: true };
       this.view = null;
       this.cache = {};
       this.compileAll();
@@ -61,8 +61,16 @@
     }
     compileAll() {
       const s = this.spec;
-      if (s.kind === 'level') this.F = this.fn(s.F, ['x', 'y']);
-      if (s.kind === 'ortho') { this.F1 = this.fn(s.main.F, ['x', 'y']); this.F2 = this.fn(s.ortho.F, ['x', 'y']); }
+      /* familias de nivel: F(x,y)=L (contornos) y/o forma analítica despejada (fragmentos) */
+      const mkFam = (tag, d, levelName) => ({
+        tag, lc: s.consts.find((c) => c.name === levelName),
+        F: d.F ? this.fn(d.F, ['x', 'y']) : null,
+        frags: d.analytic ? d.analytic.map((f) => this.compileCurve(f, 'explicit')) : null });
+      this.fams = [];
+      if (s.kind === 'level') this.fams.push(mkFam('F', s, s.consts.find((c) => c.role === 'level').name));
+      if (s.kind === 'ortho') { this.fams.push(mkFam('F1', s.main, s.main.level), mkFam('F2', s.ortho, s.ortho.level)); }
+      this.F = this.fams[0] && this.fams[0].F; this.F1 = this.F; this.F2 = this.fams[1] && this.fams[1].F;
+      this.hasBoth = this.fams.some((f) => f.frags && f.F);
       if (s.kind === 'explicit' || s.kind === 'param') {
         this.main = this.compileCurve(Object.assign({ kind: s.kind }, s, { label: null }), s.kind);
         if (s.valid) this.main.valid = this.fn(s.valid, ['x']);
@@ -95,8 +103,10 @@
         return el('label', { class: 'chip', for: id }, input, el('span', {}, text));
       };
       tools.append(chip('family', 'Todas las curvas'));
+      tools.append(chip('selected', 'Curva elegida'));
       if (this.slope) { this.opts.field = false; tools.append(chip('field', 'Campo de direcciones')); }
       if ((s.extras || []).length) tools.append(chip('extras', 'Soluciones singulares'));
+      if (this.hasBoth) tools.append(chip('numeric', 'Cálculo numérico (contornos)'));
       if (s.particular) tools.append(chip('particular', 'Solución particular'));
       this.sliders = {};
       for (const c of s.consts) this.controls.append(this.makeSlider(c));
@@ -153,18 +163,14 @@
     curveLines(c, env) {
       const K = this.K(env), v = this.view, out = [];
       if (c.kind === 'explicit') {
-        const n = Math.round(this.cssW * 2.2), X = new Float64Array(n);
-        for (let i = 0; i < n; i++) X[i] = v.x0 + (v.x1 - v.x0) * i / (n - 1);
-        for (const f of c.ys) {
-          const Y = new Float64Array(n);
-          for (let i = 0; i < n; i++) { const ok = !c.valid || c.valid(X[i], K) >= 0; Y[i] = ok ? f(X[i], K) : NaN; }
-          out.push(...E.splitCurve(X, Y, v));
-        }
+        const n = Math.round(this.cssW * 2.2), X0 = new Float64Array(n);
+        for (let i = 0; i < n; i++) X0[i] = v.x0 + (v.x1 - v.x0) * i / (n - 1);
+        for (const f of c.ys) { const r = E.sampleExplicit(f, c.valid, K, X0); out.push(...E.splitCurve(r.X, r.Y, v)); }
       } else if (c.kind === 'vline') {
         const x = c.xf(0, K); if (Number.isFinite(x)) out.push([x, v.y0, x, v.y1]);
       } else if (c.kind === 'param') {
         for (const [lo, hi] of c.t) {
-          const n = 3000, X = new Float64Array(n), Y = new Float64Array(n);
+          const n = 4000, X = new Float64Array(n), Y = new Float64Array(n);
           for (let i = 0; i < n; i++) { const t = lo + (hi - lo) * i / (n - 1); X[i] = c.xf(t, K); Y[i] = c.yf(t, K); }
           out.push(...E.splitCurve(X, Y, v));
         }
@@ -184,14 +190,27 @@
       }
       return this.cache[key];
     }
-    levelFamily(tag, F, lc, env) {
-      const entry = this.grid(tag, F, env, this.levelNames);
-      const K = this.K(env), lines = [];
-      if (this.opts.family) for (const L of E.sweepValues(lc)) {
-        if (!entry.fam.has(L)) entry.fam.set(L, E.contourLines(entry.grid, L, F, K));
-        lines.push(...entry.fam.get(L));
+    useAnalytic(fam) { return !!(fam.frags && (!this.opts.numeric || !fam.F)); }
+    /* curvas de la familia para un valor del nivel (analítico: fragmentos; numérico: contornos de F) */
+    famSel(fam, env, value) {
+      const e2 = Object.assign({}, env, { [fam.lc.name]: value });
+      if (this.useAnalytic(fam)) { const out = []; for (const f of fam.frags) out.push(...this.curveLines(f, e2)); return out; }
+      const entry = this.grid(fam.tag, fam.F, env, this.levelNames);
+      return E.contourLines(entry.grid, value, fam.F, this.K(e2));
+    }
+    levelFamily(fam, env) {
+      const lines = [];
+      if (this.opts.family) {
+        if (this.useAnalytic(fam)) for (const L of E.sweepValues(fam.lc)) lines.push(...this.famSel(fam, env, L));
+        else {
+          const entry = this.grid(fam.tag, fam.F, env, this.levelNames), K = this.K(env);
+          for (const L of E.sweepValues(fam.lc)) {
+            if (!entry.fam.has(L)) entry.fam.set(L, E.contourLines(entry.grid, L, fam.F, K));
+            lines.push(...entry.fam.get(L));
+          }
+        }
       }
-      return { entry, family: lines, sel: E.contourLines(entry.grid, env[lc.name], F, K) };
+      return { family: lines, sel: this.famSel(fam, env, env[fam.lc.name]) };
     }
 
     /* ------------------------------------------------------------ dibujo */
@@ -241,21 +260,23 @@
       ctx.save(); ctx.beginPath(); ctx.rect(0, 0, this.cssW, this.cssH); ctx.clip();
       try {
         if (this.opts.field && this.slope) this.drawField(ctx, th);
+        const sel = this.opts.selected;
         if (s.kind === 'level') {
-          const lc = s.consts.find((c) => c.role === 'level');
-          const r = this.levelFamily('F', this.F, lc, env);
+          const fam = this.fams[0], lc = fam.lc, r = this.levelFamily(fam, env);
           if (this.opts.family) { this.stroke(ctx, r.family, th.fam, 1, null, 0.4); leg.push([th.fam, 'familia (' + lc.name + ' variable)', 1, .6]); }
-          this.strong(ctx, r.sel, th.fam, 3, th); leg.push([th.fam, lc.name + ' = ' + fmt(env[lc.name]), 3]);
+          if (sel) { this.strong(ctx, r.sel, th.fam, 3, th); leg.push([th.fam, lc.name + ' = ' + fmt(env[lc.name]), 3]); }
         } else if (s.kind === 'ortho') {
-          const c1 = s.consts.find((c) => c.name === s.main.level), c2 = s.consts.find((c) => c.name === s.ortho.level);
-          const r1 = this.levelFamily('F1', this.F1, c1, env), r2 = this.levelFamily('F2', this.F2, c2, env);
+          const [f1, f2] = this.fams, c1 = f1.lc, c2 = f2.lc;
+          const r1 = this.levelFamily(f1, env), r2 = this.levelFamily(f2, env);
           if (this.opts.family) { this.stroke(ctx, r1.family, th.fam, 1, null, 0.4); this.stroke(ctx, r2.family, th.ort, 1, null, 0.4); }
-          this.strong(ctx, r1.sel, th.fam, 3, th); this.strong(ctx, r2.sel, th.ort, 3, th);
-          leg.push([th.fam, 'principal (' + c1.name + ' = ' + fmt(env[c1.name]) + ')', 3], [th.ort, 'ortogonal (' + c2.name + ' = ' + fmt(env[c2.name]) + ')', 3]);
-          const pts = E.intersections(r1.sel, r2.sel);
-          ctx.fillStyle = th.text; ctx.strokeStyle = th.bg; ctx.lineWidth = 2;
-          for (const [x, y] of pts) { ctx.beginPath(); ctx.arc(this.X(x), this.Y(y), 4.2, 0, 6.2832); ctx.stroke(); ctx.fill(); }
-          if (pts.length) leg.push([th.text, 'cortes: ángulo de 90°', 'dot']);
+          if (sel) {
+            this.strong(ctx, r1.sel, th.fam, 3, th); this.strong(ctx, r2.sel, th.ort, 3, th);
+            leg.push([th.fam, 'principal (' + c1.name + ' = ' + fmt(env[c1.name]) + ')', 3], [th.ort, 'ortogonal (' + c2.name + ' = ' + fmt(env[c2.name]) + ')', 3]);
+            const pts = E.intersections(r1.sel, r2.sel);
+            ctx.fillStyle = th.text; ctx.strokeStyle = th.bg; ctx.lineWidth = 2;
+            for (const [x, y] of pts) { ctx.beginPath(); ctx.arc(this.X(x), this.Y(y), 4.2, 0, 6.2832); ctx.stroke(); ctx.fill(); }
+            if (pts.length) leg.push([th.text, 'cortes: ángulo de 90°', 'dot']);
+          }
         } else {
           if (this.opts.family) {
             for (const c of s.consts) {
@@ -264,9 +285,11 @@
             }
             leg.push([th.fam, 'familia (constantes variables)', 1, .6]);
           }
-          this.strong(ctx, this.curveLines(this.main, env), th.fam, 3, th);
-          const shown = s.consts.filter((c) => c.sweep !== false && c.role !== 'level').map((c) => c.name + ' = ' + fmt(env[c.name])).join(', ');
-          leg.push([th.fam, 'curva elegida (' + shown + ')', 3]);
+          if (sel) {
+            this.strong(ctx, this.curveLines(this.main, env), th.fam, 3, th);
+            const shown = s.consts.filter((c) => c.sweep !== false && c.role !== 'level').map((c) => c.name + ' = ' + fmt(env[c.name])).join(', ');
+            leg.push([th.fam, 'curva elegida (' + shown + ')', 3]);
+          }
         }
         if (this.opts.extras && this.extras.length) {
           for (const c of this.extras) this.stroke(ctx, this.curveLines(c, env), th.ext, 1.8, [6, 4]);
@@ -284,8 +307,8 @@
       if (p.values) {
         const e2 = Object.assign({}, env, p.values);
         if (s.kind === 'level') {
-          const lc = s.consts.find((c) => c.role === 'level'), K = this.K(e2), g = this.grid('F', this.F, e2, this.levelNames).grid;
-          lines = E.contourLines(g, e2[lc.name], this.F, K);
+          const fam = this.fams[0];
+          lines = this.famSel(fam, e2, e2[fam.lc.name]);
         } else lines = this.curveLines(this.main, e2);
       } else lines = this.curveLines(p.curve, env);
       this.strong(ctx, lines, th.par, 3.4, th);

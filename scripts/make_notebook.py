@@ -22,9 +22,10 @@ Todo son funciones: solo hay que llamarlas.
 | un ejercicio de las hojas | `plot_problem("h3-17")` |
 | una hoja entera (miniaturas) | `plot_sheet(1)` |
 | una solución implícita `F(x,y)=C` | `plot_level(...)` |
+| una solución despejada (analítica) de una familia | `plot_analytic(...)` |
 | una solución explícita `y=f(x;C)` | `plot_explicit(...)` |
 | una solución paramétrica `x(p), y(p)` | `plot_param(...)` |
-| una familia y sus ortogonales | `plot_orthogonal(...)` |
+| una familia y sus ortogonales | `plot_orthogonal(...)` / `plot_orthogonal_analytic(...)` |
 | solo tengo la EDO (sin resolver) | `plot_ode(...)` |
 | mover las constantes con sliders | `interactive("h3-17")` |
 | figuras para el LaTeX | `export_figures(...)` |
@@ -58,6 +59,12 @@ code('plot_level("x^2 + y^2", C=(0.5, 9, 4), window=(-4, 4, -4, 4), tex=r"x^2+y^
 md("Si la solución tiene otras constantes (aquí `a`), también se pasan como argumentos: `y' = a^(x+y)  ⟹  a^x + a^(−y) = K`."),
 code('plot_level("a^x + a^(-y)", C=(0.2, 8, 3), a=(0.2, 4, 2), window=(-4, 4, -4, 4), tex=r"a^x+a^{-y}=K")'),
 
+md("""**Analítico vs. numérico.** `plot_level` dibuja por defecto los contornos de `F` (numérico). Si ya tienes la solución despejada, pásala con `analytic=` (o usa `plot_analytic`): la curva sale exacta, sin ruido numérico. `arctan x + arctan y = C  ⟹  y = tan(C − arctan x)`, válida mientras `|C − arctan x| < π/2`."""),
+code('plot_analytic("tan(C-atan(x))", C=(-3, 3, 0.8), window=(-6, 6, -6, 6))'),
+code('plot_level("atan(x)+atan(y)", C=(-3, 3, 0.8), window=(-6, 6, -6, 6), analytic=dict(y="tan(C-atan(x))", valid="pi/2-abs(C-atan(x))"), method="numeric")  # method="numeric": contornos de F'),
+md("Con **campo de direcciones** puedes ocultar la curva elegida: `selected=False` (y `family=False` para ver solo el campo)."),
+code('plot_problem("h1-01", field=True, selected=False, family=False)'),
+
 md("### Explícitas  `y = f(x; C)`\n`y' = −2xy  ⟹  y = C e^{−x²}`"),
 code('plot_explicit("C*exp(-x^2)", C=(-3, 3, 1), window=(-3, 3, -4, 4), slope="-2*x*y", field=True, tex=r"y=Ce^{-x^2}")'),
 md("Varias ramas (±) y dominio: `y² = (sin x + C)/ln x` (Hoja 2, ej. 14)."),
@@ -74,6 +81,8 @@ Se da la familia `F1(x,y) = a` y su ortogonal `F2(x,y) = C`. Se dibujan a la vez
 
 Ejemplo: `y = a xⁿ` es ortogonal a `x² + n y² = C`."""),
 code('plot_orthogonal("y/x^n", "x^2 + n*y^2", n=(0.5, 4, 2), a=(-3, 3, 1.5), C=(0.5, 12, 5.5), window=(-4, 4, -4, 4))'),
+md("Solo con las soluciones despejadas (ramas explícitas o paramétricas): `y = a x²` es ortogonal a la elipse `x = √C cos t, y = √(C/2) sin t`."),
+code('plot_orthogonal_analytic("a*x^2", dict(x="sqrt(C)*cos(t)", y="sqrt(C/2)*sin(t)", var="t", t=(0, 6.2832)), a=(0.2, 3, 1), C=(0.5, 8, 3), window=(-3, 3, -3, 3))'),
 code('plot_problem("h3-20")'),
 
 md("""## 3 · Solo tengo la EDO (sin solución cerrada)

@@ -30,32 +30,49 @@
 
   function buildTabs() {
     const nav = $('#tabs');
-    nav.replaceChildren(...sheets.map((sh) => {
-      const empty = !sh.problems.length;
-      const a = el('a', { href: '#hoja-' + sh.n, class: 'tab' + (empty ? ' soon' : ''), 'data-n': sh.n }, sh.title, empty ? el('small', {}, 'próximamente') : '');
-      return a;
-    }));
+    nav.replaceChildren(el('a', { href: '#inicio', class: 'tab', 'data-n': 'inicio' }, 'Inicio'), ...sheets.map((sh) =>
+      el('a', { href: '#hoja-' + sh.n, class: 'tab' + (sh.problems.length ? '' : ' soon'), 'data-n': sh.n }, sh.title)));
   }
 
   function route() {
     const m = /^#hoja-(\d+)(?:\/(\d+))?/.exec(location.hash);
-    const n = m ? +m[1] : (sheets.find((s) => s.problems.length) || sheets[0]).n;
-    const sheet = sheets.find((s) => s.n === n) || sheets[0];
-    if (current !== sheet.n) { show(sheet); current = sheet.n; }
-    if (m && m[2]) {
+    const sheet = m ? sheets.find((s) => s.n === +m[1]) : null;
+    const key = sheet ? sheet.n : 'inicio';
+    if (current !== key) { if (sheet) show(sheet); else home(); current = key; }
+    if (sheet && m[2]) {
       const go = () => { const t = document.getElementById('p-' + sheet.n + '-' + m[2]); if (t) t.scrollIntoView({ block: 'start' }); };
       go(); setTimeout(go, 350); setTimeout(go, 1000);   // los gráficos se crean al aparecer; reajusta tras el primer dibujo
     }
-    document.querySelectorAll('.tab').forEach((t) => t.setAttribute('aria-current', +t.dataset.n === sheet.n ? 'page' : 'false'));
+    document.querySelectorAll('.tab').forEach((t) => t.setAttribute('aria-current', String(t.dataset.n) === String(key) ? 'page' : 'false'));
+  }
+
+  /* Página de inicio: una tarjeta por hoja */
+  function home() {
+    if (observer) observer.disconnect();
+    const main = $('#hoja');
+    $('.layout').classList.add('home');
+    $('#indice').replaceChildren();
+    main.replaceChildren(el('section', { class: 'home' },
+      el('h2', { class: 'home-title' }, 'Hojas de problemas'),
+      el('div', { class: 'cards' }, ...sheets.map((sh) => {
+        const n = sh.problems.length;
+        return el('a', { class: 'card' + (n ? '' : ' soon'), href: '#hoja-' + sh.n },
+          el('span', { class: 'card-n' }, String(sh.n)),
+          el('span', { class: 'card-title' }, sh.title),
+          el('span', { class: 'card-meta' }, n ? n + (n === 1 ? ' ejercicio' : ' ejercicios') : 'Próximamente'));
+      }))));
+    window.scrollTo(0, 0);
   }
 
   function show(sheet) {
     if (observer) observer.disconnect();
     const main = $('#hoja'), idx = $('#indice');
+    $('.layout').classList.remove('home');
     main.replaceChildren();
     if (!sheet.problems.length) {
-      main.append(el('section', { class: 'empty' }, el('h2', {}, sheet.title), el('p', {}, 'Esta hoja aún no tiene ejercicios resueltos. Cuando añadas sus soluciones al LaTeX y ejecutes el script de construcción, aparecerán aquí.')));
+      main.append(el('section', { class: 'empty' }, el('p', { class: 'soon-msg' }, 'Próximamente')));
       idx.replaceChildren();
+      $('.layout').classList.add('home');
       return;
     }
     idx.replaceChildren(el('p', { class: 'idx-title' }, sheet.title), el('ol', {}, ...sheet.problems.map((p) =>

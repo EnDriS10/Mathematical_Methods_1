@@ -14,13 +14,27 @@ from edoviz import catalog  # noqa: E402
 from edoviz.plotting import _eval, default_values  # noqa: E402
 
 
+def _frag_exprs(frags):
+    out = []
+    for f in frags or []:
+        if f["kind"] == "explicit":
+            out += [(e, ["x"], None) for e in (f["y"] if isinstance(f["y"], list) else [f["y"]])]
+            if f.get("valid"):
+                out.append((f["valid"], ["x"], None))
+        else:
+            out += [(f["x"], [f["var"]], f["t"]), (f["y"], [f["var"]], f["t"])]
+    return out
+
+
 def _exprs(spec):
     out = []
     kind = spec["kind"]
     if kind == "level":
         out.append((spec["F"], ["x", "y"]))
+        out += _frag_exprs(spec.get("analytic"))
     elif kind == "ortho":
         out += [(spec["main"]["F"], ["x", "y"]), (spec["ortho"]["F"], ["x", "y"])]
+        out += _frag_exprs(spec["main"].get("analytic")) + _frag_exprs(spec["ortho"].get("analytic"))
     elif kind == "explicit":
         out += [(e, ["x"]) for e in (spec["y"] if isinstance(spec["y"], list) else [spec["y"]])]
         if spec.get("valid"):
@@ -45,7 +59,9 @@ def build_cases():
         cn = [c["name"] for c in spec["consts"]]
         K = [env[n] for n in cn]
         x0, x1, y0, y1 = spec["window"]
-        for text, vars_ in _exprs(spec):
+        for item in _exprs(spec):
+            text, vars_ = item[0], item[1]
+            trange = item[2] if len(item) > 2 and item[2] else spec.get("t")
             pts = []
             for _ in range(25):
                 pt = []
@@ -55,7 +71,7 @@ def build_cases():
                     elif v == "x":
                         pt.append(rng.uniform(x0, x1))
                     else:
-                        lo, hi = rng.choice(spec["t"])
+                        lo, hi = rng.choice(trange)
                         pt.append(rng.uniform(lo, hi))
                 pts.append(pt)
             kw = {}

@@ -97,6 +97,49 @@ def _residual_expr(ode, names):
     return sym(ode, names + ["y1", "y2", "y3"])
 
 
+def check_analytic(spec, trials=6, seed=3, tol=1e-6):
+    """Comprueba que la forma analítica despejada satisface F(x,y)=nivel. Devuelve (n_puntos, peor_error, mensajes)."""
+    import numpy as np
+    from . import plotting as P
+    rng = random.Random(seed)
+    fams = []
+    if spec["kind"] == "level" and spec.get("analytic") and spec.get("F"):
+        lc = next(c for c in spec["consts"] if c.get("role") == "level")
+        fams.append((spec["F"], spec["analytic"], lc))
+    elif spec["kind"] == "ortho":
+        for key in ("main", "ortho"):
+            f = spec[key]
+            if f.get("analytic") and f.get("F"):
+                fams.append((f["F"], f["analytic"], next(c for c in spec["consts"] if c["name"] == f["level"])))
+    count, worst, msgs = 0, 0.0, []
+    for F, frags, lc in fams:
+        for _ in range(trials):
+            env = P.default_values(spec)
+            for c in spec["consts"]:
+                env[c["name"]] = rng.uniform(c["min"], c["max"]) if c["min"] < c["max"] else c["min"]
+            lines = []
+            for f_ in frags:
+                lines += P.curve_lines(spec, f_, env)
+            if not lines:
+                continue
+            L = env[lc["name"]]
+            for ln in lines:
+                for k in np.linspace(0, len(ln) - 1, 25).astype(int):
+                    x, y = ln[k]
+                    with np.errstate(all="ignore"):
+                        val = float(np.asarray(P._eval(spec, F, env, x=x, y=y), float))
+                    if not np.isfinite(val):
+                        continue
+                    err = abs(val - L) / (1 + abs(L) + abs(val) * 1e-3)
+                    worst, count = max(worst, err), count + 1
+                    if err > tol:
+                        msgs.append(f"F={val:.6g} != {L:.6g} en ({x:.4g},{y:.4g}) con {env}")
+                        break
+    if fams and count == 0:
+        msgs.append("la forma analítica no dibuja ningún punto con valores aleatorios")
+    return count, worst, msgs
+
+
 def check_spec(spec, n=40, seed=1, tol=1e-6):
     """Devuelve (n_comprobados, peor_error, mensajes)."""
     rng = random.Random(seed)

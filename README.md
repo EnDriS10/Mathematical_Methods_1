@@ -30,9 +30,14 @@ plot_sheet(1)                                           # toda la Hoja 1 en mini
 
 # tus propias soluciones: solo escribes la solución; cada constante es (mín, máx, valor_resaltado)
 plot_level("atan(x)+atan(y)", C=(-3, 3, 0.8))                      # F(x,y) = C
+plot_analytic("tan(C-atan(x))", C=(-3, 3, 0.8))                    # solución despejada (analítica, exacta)
+plot_level("atan(x)+atan(y)", C=(-3, 3, 0.8), method="numeric")    # contornos de F (numérico)
 plot_explicit("exp(-x)+C*exp(-2*x)", C=(-3, 3, 1))                 # y = f(x; C)
 plot_param("(p+1)*exp(p)+C", "p^2*exp(p)", var="p", t=(-10, 2), C=(-4, 4, 0))   # x(p), y(p)
 plot_orthogonal("y/x^n", "x^2+n*y^2", n=(0.5, 4, 2), a=(-3, 3, 1.5), C=(0.5, 12, 5.5))
+plot_orthogonal_analytic("a*x^n", dict(x="sqrt(C)*cos(t)", y="sqrt(C/n)*sin(t)", var="t", t=(0, 6.2832)),
+                         n=(0.5, 4, 2), a=(-3, 3, 1.5), C=(0.5, 12, 5.5))      # solo soluciones despejadas
+plot_problem("h1-01", field=True, selected=False)       # campo de direcciones sin la curva elegida
 
 # solo tienes la EDO (sin resolver): integración numérica + campo de direcciones
 plot_ode(slope="sin(x-y)", highlight=(0, 1))

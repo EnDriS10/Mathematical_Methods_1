@@ -212,6 +212,24 @@
     return out;
   }
 
+  /* Muestrea y=f(x) y añade por bisección el punto exacto donde f deja de estar definida
+     (une las ramas ±sqrt(...) en la tangente vertical sin hueco). Devuelve {X, Y}. */
+  function sampleExplicit(f, valid, K, X0) {
+    const val = (x) => { if (valid && !(valid(x, K) >= 0)) return NaN; return f(x, K); };
+    let X = X0; const ok = Array.from(X0, (x) => Number.isFinite(val(x)));
+    const extra = [];
+    for (let i = 0; i < X0.length - 1; i++) {
+      if (ok[i] === ok[i + 1]) continue;
+      let lo = ok[i] ? X0[i] : X0[i + 1], hi = ok[i] ? X0[i + 1] : X0[i];
+      for (let k = 0; k < 60; k++) { const m = (lo + hi) / 2; if (Number.isFinite(val(m))) lo = m; else hi = m; }
+      extra.push(lo);
+    }
+    if (extra.length) { X = Float64Array.from(Array.from(X0).concat(extra)).sort(); }
+    const Y = new Float64Array(X.length);
+    for (let i = 0; i < X.length; i++) Y[i] = val(X[i]);
+    return { X, Y };
+  }
+
   /* sweep de una constante (misma lógica que edoviz.plotting.sweep_values) */
   function sweepValues(c) {
     const out = []; const lo = c.min, hi = c.max, n = c.n || 13;
@@ -251,6 +269,6 @@
     return pts;
   }
 
-  const api = { compile, tokenize, march, cleanLine, levelGrid, contourLines, splitCurve, sweepValues, intersections, H };
+  const api = { compile, tokenize, march, cleanLine, levelGrid, contourLines, splitCurve, sampleExplicit, sweepValues, intersections, H };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.EdoEngine = api;
 })(typeof window !== 'undefined' ? window : globalThis);

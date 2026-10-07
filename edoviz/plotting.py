@@ -160,10 +160,31 @@ def _split(x, y, window):
     return out
 
 
-def _valid_mask(spec, env, xs):
-    if not spec.get("valid"):
-        return None
-    return _eval(spec, spec["valid"], env, x=xs) >= 0
+def _explicit_samples(spec, e, vtxt, env, xs, iters=60):
+    """Muestrea y=f(x) y añade, por bisección, el punto exacto donde f deja de estar definida.
+
+    Así las ramas ±sqrt(...) se unen en la tangente vertical sin hueco (sin ruido numérico).
+    """
+    def ev(xv):
+        y = np.broadcast_to(np.asarray(_eval(spec, e, env, x=xv), float), np.shape(xv)).copy()
+        if vtxt:
+            with np.errstate(all="ignore"):
+                y[~(np.asarray(_eval(spec, vtxt, env, x=xv), float) >= 0)] = np.nan
+        return y
+
+    with np.errstate(all="ignore"):
+        ys = ev(xs)
+        ok = np.isfinite(ys)
+        idx = np.nonzero(ok[:-1] != ok[1:])[0]
+        if len(idx):
+            lo = np.where(ok[idx], xs[idx], xs[idx + 1]); hi = np.where(ok[idx], xs[idx + 1], xs[idx])
+            for _ in range(iters):
+                mid = (lo + hi) / 2
+                good = np.isfinite(ev(mid))
+                lo = np.where(good, mid, lo); hi = np.where(good, hi, mid)
+            xs = np.unique(np.concatenate([xs, lo]))
+            ys = ev(xs)
+    return xs, ys
 
 
 # --------------------------------------------------------------------------- trazado de curvas
@@ -174,13 +195,11 @@ def curve_lines(spec, curve, env, res=3000):
     kind = curve.get("kind", spec["kind"])
     lines = []
     if kind == "explicit":
-        xs = np.linspace(x0, x1, res)
+        xs0 = np.linspace(x0, x1, res)
         exprs = curve["y"] if isinstance(curve["y"], list) else [curve["y"]]
-        mask = _valid_mask(curve if curve.get("valid") else spec, env, xs) if (curve.get("valid") or spec.get("valid")) else None
+        vtxt = curve.get("valid") or spec.get("valid")
         for e in exprs:
-            ys = np.broadcast_to(np.asarray(_eval(spec, e, env, x=xs), float), xs.shape).copy()
-            if mask is not None:
-                ys[~mask] = np.nan
+            xs, ys = _explicit_samples(spec, e, vtxt, env, xs0)
             lines += _split(xs, ys, window)
     elif kind == "vline":
         xv = float(_eval(spec, curve["x"], env, x=0.0))
@@ -297,8 +316,13 @@ def _intersections(a, b, limit=400):
 
 def plot_spec(spec: Mapping, values: Mapping | None = None, ax=None, theme: str = "light", family: bool = True,
               extras: bool = True, particular: bool = True, field: bool = False, title: bool | str = True,
-              legend: bool = True, res: int = 500, figsize=(6.2, 4.6), show: bool = False):
-    """Dibuja un spec del catálogo (o creado con ``plot_*``). Devuelve ``(fig, ax)``."""
+              legend: bool = True, res: int = 500, figsize=(6.2, 4.6), show: bool = False,
+              selected: bool = True, method: str = "analytic"):
+    """Dibuja un spec del catálogo (o creado con ``plot_*``). Devuelve ``(fig, ax)``.
+
+    ``method="analytic"`` (por defecto) usa la solución despejada si el spec la tiene; ``"numeric"`` dibuja
+    las curvas de nivel de F(x,y). ``selected=False`` oculta la curva elegida (p. ej. solo campo de direcciones).
+    """
     th = THEMES[theme]
     env = _env(spec, values)
     created = ax is None
@@ -325,37 +349,60 @@ def plot_spec(spec: Mapping, values: Mapping | None = None, ax=None, theme: str 
                   angles="xy", pivot="mid", width=0.0028, headwidth=0, headlength=0, headaxislength=0, zorder=1)
 
     # ---- familias
-    def draw_level_family(F, lc, color, name, zorder, label_family, label_sel):
-        levels = sweep_values(lc) if family else np.array([])
+    analytic_on = method != "numeric"
+    ncolor = {"main": th["family"], "ortho": th["ortho"]}
+
+    def frags_of(fam):
+        """Fragmentos analíticos a usar (o None si se dibuja por contornos de F)."""
+        fr = fam.get("analytic")
+        if fr and (analytic_on or not fam.get("F")):
+            return fr
+        return None
+
+    def fam_lines(fam, lc, value, e_):
+        e2 = dict(e_); e2[lc["name"]] = float(value)
+        fr = frags_of(fam)
+        if fr is None:
+            return level_lines(spec, fam["F"], e2, [float(value)], res=res)[0][0]
+        out = []
+        for f_ in fr:
+            out += curve_lines(spec, f_, e2)
+        return out
+
+    def draw_family(fam, lc, color, zorder, label_family, label_sel):
         sel = env[lc["name"]]
-        allv = list(levels) + [sel]
-        res_lines, _ = level_lines(spec, F, env, allv, res=res)
-        for lv, ln in zip(allv[:-1], res_lines[:-1]):
+        if frags_of(fam) is None:
+            levels = sweep_values(lc) if family else np.array([])
+            allv = list(levels) + [sel]
+            res_lines, _ = level_lines(spec, fam["F"], env, allv, res=res)
+            fam_ls, sel_lines = res_lines[:-1], res_lines[-1]
+        else:
+            levels = sweep_values(lc) if family else np.array([])
+            fam_ls = [fam_lines(fam, lc, v, env) for v in levels]
+            sel_lines = fam_lines(fam, lc, sel, env)
+        for ln in fam_ls:
             _plot_lines(ax, ln, color=color, lw=0.9, alpha=.42, zorder=zorder)
         if len(levels):
             mk(label_family, color=color, lw=.9, alpha=.6)
-        sel_lines = res_lines[-1]
-        _plot_lines(ax, sel_lines, color=th["bg"], lw=5.2, zorder=zorder + 1)
-        _plot_lines(ax, sel_lines, color=color, lw=2.8, zorder=zorder + 2)
-        mk(label_sel.format(v=sel), color=color, lw=2.8)
+        if selected:
+            _plot_lines(ax, sel_lines, color=th["bg"], lw=5.2, zorder=zorder + 1)
+            _plot_lines(ax, sel_lines, color=color, lw=2.8, zorder=zorder + 2)
+            mk(label_sel.format(v=sel), color=color, lw=2.8)
         return sel_lines
 
     if kind == "level":
         lc = _level_const(spec)
-        draw_level_family(spec["F"], lc, th["family"], lc["name"], 3,
-                          f"familia ({lc['name']} variable)", lc["name"] + "={v:g}")
+        draw_family(dict(F=spec.get("F"), analytic=spec.get("analytic")), lc, th["family"], 3,
+                    f"familia ({lc['name']} variable)", lc["name"] + "={v:g}")
     elif kind == "ortho":
         c1 = next(c for c in spec["consts"] if c["name"] == spec["main"]["level"])
         c2 = next(c for c in spec["consts"] if c["name"] == spec["ortho"]["level"])
-        l1 = draw_level_family(spec["main"]["F"], c1, th["family"], c1["name"], 3,
-                               "familia principal", f"principal ({c1['name']}=" + "{v:g})")
-        l2 = draw_level_family(spec["ortho"]["F"], c2, th["ortho"], c2["name"], 3,
-                               "familia ortogonal", f"ortogonal ({c2['name']}=" + "{v:g})")
-        pts = _intersections(l1, l2)
+        l1 = draw_family(spec["main"], c1, th["family"], 3, "familia principal", f"principal ({c1['name']}=" + "{v:g})")
+        l2 = draw_family(spec["ortho"], c2, th["ortho"], 3, "familia ortogonal", f"ortogonal ({c2['name']}=" + "{v:g})")
+        pts = _intersections(l1, l2) if selected else np.zeros((0, 2))
         if len(pts):
             ax.scatter(pts[:, 0], pts[:, 1], s=34, color=th["fg"], zorder=9, label="cortes (ángulo de 90°)")
     else:
-        base = dict(spec)
         if family:
             for c in spec["consts"]:
                 if not c.get("sweep", True) or c.get("role") == "level":
@@ -364,12 +411,13 @@ def plot_spec(spec: Mapping, values: Mapping | None = None, ax=None, theme: str 
                     e2 = dict(env); e2[c["name"]] = float(v)
                     _plot_lines(ax, curve_lines(spec, spec, e2), color=th["family"], lw=.9, alpha=.42, zorder=3)
             mk("familia (constantes variables)", color=th["family"], lw=.9, alpha=.6)
-        sel_lines = curve_lines(spec, spec, env)
-        _plot_lines(ax, sel_lines, color=th["bg"], lw=5.2, zorder=5)
-        _plot_lines(ax, sel_lines, color=th["family"], lw=2.8, zorder=6)
-        shown = ", ".join(f"{c['name']}={env[c['name']]:g}" for c in spec["consts"]
-                          if c.get("sweep", True) and c.get("role") != "level")
-        mk(f"curva elegida ({shown})", color=th["family"], lw=2.8)
+        if selected:
+            sel_lines = curve_lines(spec, spec, env)
+            _plot_lines(ax, sel_lines, color=th["bg"], lw=5.2, zorder=5)
+            _plot_lines(ax, sel_lines, color=th["family"], lw=2.8, zorder=6)
+            shown = ", ".join(f"{c['name']}={env[c['name']]:g}" for c in spec["consts"]
+                              if c.get("sweep", True) and c.get("role") != "level")
+            mk(f"curva elegida ({shown})", color=th["family"], lw=2.8)
 
     # ---- soluciones singulares / extras
     if extras:
@@ -386,8 +434,7 @@ def plot_spec(spec: Mapping, values: Mapping | None = None, ax=None, theme: str 
             e2 = dict(env); e2.update(part["values"])
             if kind in ("level", "ortho"):
                 lc = _level_const(spec)
-                lines, _ = level_lines(spec, spec["F"], e2, [e2[lc["name"]]], res=res)
-                lines = lines[0]
+                lines = fam_lines(dict(F=spec.get("F"), analytic=spec.get("analytic")), lc, e2[lc["name"]], e2)
             else:
                 lines = curve_lines(spec, spec, e2)
         else:
@@ -472,7 +519,7 @@ def make_spec(kind: str, window, consts: Iterable[dict], tex: str = "", **kw) ->
     return spec
 
 
-_PLOT_OPTS = ("values", "ax", "theme", "family", "field", "title", "legend", "res", "figsize", "show", "particular_on", "extras_on")
+_PLOT_OPTS = ("selected", "method", "values", "ax", "theme", "family", "field", "title", "legend", "res", "figsize", "show", "particular_on", "extras_on")
 
 
 def _split_kw(kw: dict):
@@ -486,19 +533,60 @@ def _split_kw(kw: dict):
     return opts, consts
 
 
-def plot_level(F: str, C=(-3, 3, 0.0), window=(-5, 5, -5, 5), params: Mapping | None = None, level_name: str = "C",
-               tex: str = "", slope: str | None = None, extras=None, particular=None, n: int = 13, spacing="uniform", **kw):
-    """Soluciones implícitas ``F(x,y)=C``.
+def as_fragments(a):
+    """Normaliza una solución analítica a una lista de fragmentos.
 
-    ``C=(mín, máx, valor)``: rango de la constante (curvas de nivel) y valor resaltado. Otras constantes de ``F``
+    * ``"tan(C-atan(x))"``                      -> y=f(x)
+    * ``["sqrt(C-x^2)", "-sqrt(C-x^2)"]``       -> ramas y=f(x)
+    * ``dict(x="cos(t)", y="sin(t)", var="t", t=(0, 6.2832))`` -> paramétrica
+    * lista de cualquiera de los anteriores
+    """
+    if a is None:
+        return None
+    if isinstance(a, str):
+        return [dict(kind="explicit", y=a)]
+    if isinstance(a, dict):
+        if "x" in a and "var" in a:
+            t = a["t"]
+            t = [list(i) for i in t] if np.ndim(t) == 2 else [list(t)]
+            return [dict(kind="param", x=a["x"], y=a["y"], var=a["var"], t=t)]
+        d = dict(kind="explicit", y=a["y"])
+        if a.get("valid"):
+            d["valid"] = a["valid"]
+        return [d]
+    if all(isinstance(i, str) for i in a):
+        return [dict(kind="explicit", y=list(a))]
+    out = []
+    for i in a:
+        out += as_fragments(i)
+    return out
+
+
+def plot_level(F: str | None = None, C=(-3, 3, 0.0), window=(-5, 5, -5, 5), params: Mapping | None = None,
+               level_name: str = "C", tex: str = "", slope: str | None = None, extras=None, particular=None,
+               n: int = 13, spacing="uniform", analytic=None, **kw):
+    """Soluciones implícitas ``F(x,y)=C`` (numérico: curvas de nivel) y/o su forma despejada (analítico).
+
+    ``C=(mín, máx, valor)``: rango de la constante y valor resaltado. Otras constantes de ``F``
     (p. ej. ``a=(0.2, 4, 2)``) se pasan como argumentos con nombre o en ``params``.
+    ``analytic`` = solución despejada (ver ``as_fragments``); se usa por defecto si se da. ``method="numeric"``
+    fuerza los contornos de ``F``.
     """
     opts, more = _split_kw(kw)
     consts = [_const(level_name, C, role="level", n=n, spacing=spacing)] + \
              [_const(k, v, sweep=False) for k, v in {**(params or {}), **more}.items()]
     spec = make_spec("level", window, consts, tex or f"F(x,y)={level_name}", F=F, slope=slope,
-                     extras=extras or [], particular=particular)
+                     extras=extras or [], particular=particular, analytic=as_fragments(analytic))
     return plot_spec(spec, **opts)
+
+
+def plot_analytic(analytic, C=(-3, 3, 0.0), window=(-5, 5, -5, 5), **kw):
+    """Graficador analítico de una familia de un parámetro: solo se da la solución despejada.
+
+    ``plot_analytic("tan(C-atan(x))", C=(-3, 3, .8))`` o con paramétricas
+    ``plot_analytic(dict(x="C*cos(t)", y="C*sin(t)", var="t", t=(0, 6.2832)), C=(.5, 4, 2))``.
+    """
+    return plot_level(None, C=C, window=window, analytic=analytic, **kw)
 
 
 def plot_explicit(y, window=(-5, 5, -5, 5), consts: Mapping | None = None, tex: str = "", slope=None, extras=None,
@@ -523,15 +611,30 @@ def plot_param(x: str, y: str, var: str, t, window=(-5, 5, -5, 5), consts: Mappi
     return plot_spec(spec, **opts)
 
 
-def plot_orthogonal(F1: str, F2: str, window=(-5, 5, -5, 5), params: Mapping | None = None, a=(-3, 3, 1), C=(-3, 3, 1),
-                    tex: str = "", **kw):
-    """Familia principal ``F1(x,y)=a`` y sus trayectorias ortogonales ``F2(x,y)=C`` (se marcan los cortes a 90°)."""
+def plot_orthogonal(F1: str | None = None, F2: str | None = None, window=(-5, 5, -5, 5), params: Mapping | None = None,
+                    a=(-3, 3, 1), C=(-3, 3, 1), tex: str = "", analytic=None, **kw):
+    """Familia principal ``F1(x,y)=a`` y sus trayectorias ortogonales ``F2(x,y)=C`` (se marcan los cortes a 90°).
+
+    ``analytic=(solución_principal, solución_ortogonal)`` da las dos familias despejadas (ver ``as_fragments``),
+    que se usan por defecto; ``method="numeric"`` fuerza los contornos de F1 y F2.
+    """
     opts, more = _split_kw(kw)
     consts = [_const("a", a, role="level", n=9), _const("C", C, role="level", n=9)] + \
              [_const(k, v, sweep=False) for k, v in {**(params or {}), **more}.items()]
-    spec = make_spec("ortho", window, consts, tex or "F_1=a \\perp F_2=C", main=dict(F=F1, level="a"),
-                     ortho=dict(F=F2, level="C"), aspect="equal")
+    main = dict(F=F1, level="a"); orth = dict(F=F2, level="C")
+    if analytic:
+        main["analytic"] = as_fragments(analytic[0]); orth["analytic"] = as_fragments(analytic[1])
+    spec = make_spec("ortho", window, consts, tex or "F_1=a \\perp F_2=C", main=main, ortho=orth, aspect="equal")
     return plot_spec(spec, **opts)
+
+
+def plot_orthogonal_analytic(main, ortho, window=(-5, 5, -5, 5), params: Mapping | None = None, a=(-3, 3, 1),
+                             C=(-3, 3, 1), tex: str = "", **kw):
+    """Igual que ``plot_orthogonal`` pero solo con las soluciones despejadas (sin F1, F2).
+
+    ``plot_orthogonal_analytic("a*x^2", dict(x="sqrt(C)*cos(t)", y="sqrt(C/2)*sin(t)", var="t", t=(0, 6.2832)))``
+    """
+    return plot_orthogonal(None, None, window, params, a, C, tex, analytic=(main, ortho), **kw)
 
 
 # --------------------------------------------------------------------------- partir solo de la EDO (numérico)

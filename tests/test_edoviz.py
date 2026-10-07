@@ -25,6 +25,36 @@ def test_solution_satisfies_its_ode(id_):
     assert not msgs, msgs[:3]
 
 
+ANALYTIC = [i for i in IDS if catalog.get(i).get("analytic") or catalog.get(i).get("main", {}).get("analytic")]
+
+
+@pytest.mark.parametrize("id_", ANALYTIC)
+def test_analytic_form_satisfies_F(id_):
+    """La forma despejada (analítica) cumple F(x,y)=nivel."""
+    count, worst, msgs = check.check_analytic(catalog.get(id_))
+    assert count > 20 and not msgs, msgs[:3]
+
+
+@pytest.mark.parametrize("id_", ANALYTIC)
+def test_numeric_method_still_works(id_):
+    fig, ax = plot_problem(id_, method="numeric")
+    assert len(ax.lines) > 0
+    plt.close(fig)
+
+
+def test_selected_off_and_analytic_api():
+    from edoviz import plot_analytic, plot_orthogonal_analytic
+    fig, ax = plot_problem("h1-01", field=True, selected=False)
+    assert all(l.get_linewidth() < 2 for l in ax.lines if len(l.get_xdata()) > 2)
+    plt.close(fig)
+    fig, ax = plot_analytic("tan(C-atan(x))", C=(-3, 3, 0.8))
+    assert len(ax.lines) > 5
+    plt.close(fig)
+    fig, ax = plot_orthogonal_analytic("a*x^2", dict(x="sqrt(C)*cos(t)", y="sqrt(C/2)*sin(t)", var="t", t=(0, 6.2832)))
+    assert len(ax.lines) > 5
+    plt.close(fig)
+
+
 @pytest.mark.parametrize("id_", IDS)
 def test_plot_renders(id_):
     fig, ax = plot_problem(id_, field=True)

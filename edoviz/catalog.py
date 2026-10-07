@@ -9,7 +9,12 @@ Tipos de ``kind``:
   level     curvas de nivel F(x,y)=C           (soluciones implícitas)
   explicit  y = f(x; constantes)               (admite lista [y+, y-])
   param     x(t), y(t) con parámetro ``var``   (EDOs de Lagrange/Clairaut...)
-  ortho     dos familias de nivel F1=a, F2=C   (trayectorias ortogonales)
+  ortho     dos familias F1=a, F2=C            (trayectorias ortogonales)
+
+Forma analítica (opcional): los problemas ``level`` y las dos familias de ``ortho`` pueden llevar
+``analytic=[frag, ...]`` con la solución despejada (``ex(...)`` = y=f(x), ``pa(...)`` = x(t), y(t)).
+El graficador usa esa forma exacta por defecto (``method="analytic"``); con ``method="numeric"``
+dibuja las curvas de nivel de F (contornos). Si no hay forma analítica se usa F.
 
 Campos comunes: window [x0,x1,y0,y1], consts, extras (curvas singulares),
 particular (solución de un problema de valor inicial), slope (y'=f(x,y), para
@@ -61,9 +66,27 @@ def param(id_, x, y, var, t, consts, window, tex, **kw):
     return _add(id_, "param", tex, window, consts, x=x, y=y, var=var, t=t, **kw)
 
 
-def ortho(id_, F1, F2, consts, window, tex, **kw):
-    return _add(id_, "ortho", tex, window, consts, main=dict(F=F1, level=consts[0]["name"]),
-                ortho=dict(F=F2, level=consts[1]["name"]), aspect="equal", **kw)
+def ortho(id_, F1, F2, consts, window, tex, a1=None, a2=None, **kw):
+    main = dict(F=F1, level=consts[0]["name"])
+    orth = dict(F=F2, level=consts[1]["name"])
+    if a1:
+        main["analytic"] = a1
+    if a2:
+        orth["analytic"] = a2
+    return _add(id_, "ortho", tex, window, consts, main=main, ortho=orth, aspect="equal", **kw)
+
+
+def ex(y, valid=None):
+    """Fragmento analítico explícito y=f(x) (``y`` puede ser lista de ramas)."""
+    d = dict(kind="explicit", y=y)
+    if valid:
+        d["valid"] = valid
+    return d
+
+
+def pa(x, y, var, t):
+    """Fragmento analítico paramétrico x(var), y(var); ``t=[lo, hi]`` o lista de intervalos."""
+    return dict(kind="param", x=x, y=y, var=var, t=t if isinstance(t[0], (list, tuple)) else [list(t)])
 
 
 def hline(y, label=None):
@@ -76,18 +99,21 @@ def vline(x, label=None):
 
 # =====================================================================  HOJA 1
 level("h1-01", "atan(x)+atan(y)", K("C", -3, 3, 0.8), [-6, 6, -6, 6],
-      r"\arctan x+\arctan y=C", slope="-(1+y^2)/(1+x^2)")
+      r"\arctan x+\arctan y=C", slope="-(1+y^2)/(1+x^2)",
+      analytic=[ex("tan(C-atan(x))", valid="pi/2-abs(C-atan(x))")])
 
 level("h1-02", "x^2*(1+y^2)", K("K", 0.1, 6, 2), [-4, 4, -4, 4],
       r"x^2(1+y^2)=K,\;K\geq 0", slope="-(1+y^2)/(x*y)",
-      extras=[vline(0, "K=0: x=0")])
+      extras=[vline(0, "K=0: x=0")],
+      analytic=[pa("sqrt(K/(1+t^2))", "t", "t", [-7, 7]), pa("-sqrt(K/(1+t^2))", "t", "t", [-7, 7])])
 
 explicit("h1-03", "K*sin(x)", [K("K", -3, 3, 1)], [-7, 7, -3.5, 3.5],
          r"y=K\sin x", slope="y*cos(x)/sin(x)", ode="y1*sin(x)-y*cos(x)",
          particular=dict(values={"K": 1}, point=["pi/2", "1"], label="y(π/2)=1"))
 
 level("h1-04", "sqrt(1+x^2)+sqrt(1+y^2)", K("C", 2, 7, 4), [-5, 5, -5, 5],
-      r"\sqrt{1+x^2}+\sqrt{1+y^2}=C,\;C\geq 2", slope="-x*sqrt(1+y^2)/(y*sqrt(1+x^2))")
+      r"\sqrt{1+x^2}+\sqrt{1+y^2}=C,\;C\geq 2", slope="-x*sqrt(1+y^2)/(y*sqrt(1+x^2))",
+      analytic=[ex(["sqrt((C-sqrt(1+x^2))^2-1)", "-sqrt((C-sqrt(1+x^2))^2-1)"], valid="C-sqrt(1+x^2)-1")])
 
 explicit("h1-05", ["sqrt(1-(C-sqrt(1-x^2))^2)", "-sqrt(1-(C-sqrt(1-x^2))^2)"], [K("C", 0.05, 2, 1)],
          [-1.2, 1.2, -1.2, 1.2], r"\sqrt{1-x^2}+\sqrt{1-y^2}=C", valid="C-sqrt(1-x^2)",
@@ -95,29 +121,35 @@ explicit("h1-05", ["sqrt(1-(C-sqrt(1-x^2))^2)", "-sqrt(1-(C-sqrt(1-x^2))^2)"], [
          particular=dict(values={"C": 1}, point=["0", "1"], label="y(0)=1"))
 
 level("h1-06", "(1-exp(-y))/exp(x)", K("C", -3, 3, 1), [-4, 3, -4, 4],
-      r"1-e^{-y}=\pm Ke^{x}", slope="exp(y)-1")
+      r"1-e^{-y}=\pm Ke^{x}", slope="exp(y)-1",
+      analytic=[ex("-log(1-C*exp(x))")])
 
 level("h1-07", "x*log(y)", K("C", -3, 3, 1), [-4, 4, 0.02, 5],
       r"x\ln y=K", slope="-y*log(y)/x",
-      particular=dict(curve=hline(1), point=["1", "1"], label="y(1)=1"))
+      particular=dict(curve=hline(1), point=["1", "1"], label="y(1)=1"),
+      analytic=[ex("exp(C/x)")])
 
 level("h1-08", "a^x+a^(-y)", K("K", 0.2, 8, 3, n=12),
       [-4, 4, -4, 4], r"a^x+a^{-y}=K,\;K>0",
-      params=[K("a", 0.2, 4, 2, sweep=False, step=0.05)], slope="a^(x+y)")
+      params=[K("a", 0.2, 4, 2, sweep=False, step=0.05)], slope="a^(x+y)",
+      analytic=[ex("-log(K-a^x)/log(a)")])
 
 level("h1-09", "2/(1-tan((x-y)/2))-x", K("C", -8, 8, 0), [-7, 7, -7, 7],
       r"\dfrac{2}{1-\tan\frac{x-y}{2}}=x+C", slope="sin(x-y)",
-      extras=[hline(f"x-pi/2-2*pi*({k})", "y=x−π/2−2kπ" if k == 0 else None) for k in range(-2, 3)])
+      extras=[hline(f"x-pi/2-2*pi*({k})", "y=x−π/2−2kπ" if k == 0 else None) for k in range(-2, 3)],
+      analytic=[ex(f"x-2*atan(1-2/(x+C))-2*pi*({k})-2*pi*sel(x+C,1,0)") for k in range(-3, 4)])
 
 level("h1-10", "(a+b*(a*x+b*y+c))*exp(-b*x)", K("C", -6, 6, 1), [-4, 4, -6, 6],
       r"a+b(ax+by+c)=\pm Ke^{bx}", slope="a*x+b*y+c",
       params=[K("a", -3, 3, 1, sweep=False, step=0.1), K("b", -2, 2, 1, sweep=False, step=0.1),
-              K("c", -3, 3, 0, sweep=False, step=0.1)])
+              K("c", -3, 3, 0, sweep=False, step=0.1)],
+      analytic=[ex("(C*exp(b*x)-a-b*(a*x+c))/b^2")])
 
 level("h1-11", "(1+x*y)*exp(-a*x)", K("K", -3, 3, 0.5), [-4, 4, -4, 4],
       r"1+xy=Ke^{ax}", slope="(a*(1+x*y)-y)/x",
       params=[K("a", -2, 2, 1, sweep=False, step=0.1)],
-      particular=dict(curve=dict(kind="explicit", y="-1/x"), point=["1/a", "-a"], label="y(1/a)=−a"))
+      particular=dict(curve=dict(kind="explicit", y="-1/x"), point=["1/a", "-a"], label="y(1/a)=−a"),
+      analytic=[ex("(K*exp(a*x)-1)/x")])
 
 explicit("h1-12", "2*atan(C*exp(2*sin(x)))", [K("C", -4, 4, 1)], [-7, 7, -4, 4],
          r"\tan\frac{y}{2}=Ce^{2\sin x}", slope="2*cos(x)*sin(y)",
@@ -147,21 +179,26 @@ explicit("h1-17", "x-2*x/(log(abs(x))+C)", [K("C", -4, 4, 0)], [-6, 6, -6, 6],
          extras=[hline("x", "y=x (singular)")])
 
 level("h1-18", "2*x^2-3*x*y+y^2", K("C", -10, 10, 4), [-5, 5, -5, 5],
-      r"2x^2-3xy+y^2=C", slope="(4*x-3*y)/(3*x-2*y)")
+      r"2x^2-3xy+y^2=C", slope="(4*x-3*y)/(3*x-2*y)",
+      analytic=[ex(["(3*x+sqrt(x^2+4*C))/2", "(3*x-sqrt(x^2+4*C))/2"])])
 
 explicit("h1-19", "1+(x-1)*(log(abs(x-1))+C)", [K("C", -3, 3, 0)], [-3, 5, -6, 8],
          r"y=1+(x-1)(\ln|x-1|+C)", slope="(2-x-y)/(1-x)")
 
 level("h1-20", "(y-x+1)^2*(y+x-1)^5", K("C", -60, 60, 5, n=14, spacing="symlog"), [-3, 5, -4, 4],
       r"(y-x+1)^2(y+x-1)^5=C", slope="(3*y-7*x+7)/(3*x-7*y-3)",
-      extras=[hline("x-1", "y=x−1"), hline("1-x", "y=1−x")])
+      extras=[hline("x-1", "y=x−1"), hline("1-x", "y=1−x")],
+      analytic=[pa("1+(sel(C,1,-1)*abs(C)^(1/5)*exp(-2*s/5)-exp(s))/2", "(exp(s)+sel(C,1,-1)*abs(C)^(1/5)*exp(-2*s/5))/2", "s", [-20, 3]),
+                pa("1+(sel(C,1,-1)*abs(C)^(1/5)*exp(-2*s/5)+exp(s))/2", "(sel(C,1,-1)*abs(C)^(1/5)*exp(-2*s/5)-exp(s))/2", "s", [-20, 3])])
 
 # =====================================================================  HOJA 2
 level("h2-01", "(4*x+2*y)^2+4*x+4*y", K("C", -20, 20, 4), [-4, 4, -6, 6],
-      r"(4x+2y)^2+4x+4y=C", slope="-(8*x+4*y+1)/(4*x+2*y+1)")
+      r"(4x+2y)^2+4x+4y=C", slope="-(8*x+4*y+1)/(4*x+2*y+1)",
+      analytic=[ex(["(-(4*x+1)+sqrt(4*x+1+C))/2", "(-(4*x+1)-sqrt(4*x+1+C))/2"])])
 
 level("h2-02", "(x-2*y)*exp(-(x+3*y))", K("C", -2, 2, 0.5), [-4, 4, -4, 4],
-      r"x-2y=\pm Ke^{x+3y}", slope="-(x-2*y-1)/(3*x-6*y+2)")
+      r"x-2y=\pm Ke^{x+3y}", slope="-(x-2*y-1)/(3*x-6*y+2)",
+      analytic=[pa("(3*C*exp(s)+2*s)/5", "(s-C*exp(s))/5", "s", [-14, 14])])
 
 explicit("h2-03", "exp(-x)+C*exp(-2*x)", [K("C", -3, 3, 1)], [-2, 3, -4, 8],
          r"y=e^{-x}+Ce^{-2x}", slope="exp(-x)-2*y")
@@ -214,7 +251,8 @@ explicit("h2-17", "C*x^((1-n)/n)", [K("C", -3, 3, 1)], [0, 5, -5, 5],
          ) ["consts"].append(K("n", 0.3, 4, 2, sweep=False, step=0.1))
 
 level("h2-18", "x^4+x^2*y^2+y^4", K("C", 0.2, 30, 5, n=10, spacing="geom"), [-3, 3, -3, 3],
-      r"x^4+x^2y^2+y^4=C", slope="-x*(2*x^2+y^2)/(y*(x^2+2*y^2))")
+      r"x^4+x^2y^2+y^4=C", slope="-x*(2*x^2+y^2)/(y*(x^2+2*y^2))",
+      analytic=[ex(["sqrt((sqrt(4*C-3*x^4)-x^2)/2)", "-sqrt((sqrt(4*C-3*x^4)-x^2)/2)"])])
 
 level("h2-19", "sqrt(x^2+y^2)+log(abs(x*y))+x/y", K("C", -6, 6, 1), [-4, 4, -4, 4],
       r"\sqrt{x^2+y^2}+\ln|xy|+\dfrac{x}{y}=C",
@@ -229,7 +267,9 @@ explicit("h3-01", "cbrt(x^2*(C-x*log(x)+x))", [K("C", -6, 6, 1)], [0, 5, -6, 6],
          r"\dfrac{y^3}{x^2}+x\ln x-x=C", ode="(x^4*log(x)-2*x*y^3)+3*x^2*y^2*y1")
 
 level("h3-02", "(sin(y)+x-1+(sin(x)-cos(x))/2)*exp(x)", K("C", -60, 60, 5, n=14, spacing="symlog"),
-      [-4, 4, -4, 4], r"\sin y+x-1+\tfrac{\sin x-\cos x}{2}=Ce^{-x}", slope="-(x+sin(x)+sin(y))/cos(y)")
+      [-4, 4, -4, 4], r"\sin y+x-1+\tfrac{\sin x-\cos x}{2}=Ce^{-x}", slope="-(x+sin(x)+sin(y))/cos(y)",
+      analytic=[ex("asin(g)"), ex("pi-asin(g)"), ex("-pi-asin(g)")],
+      defs=[["g", "C*exp(-x)-x+1-(sin(x)-cos(x))/2"]])
 
 param("h3-03", "(p+1)*exp(p)+C", "p^2*exp(p)", "p", [[-12, 2.2]], [K("C", -4, 4, 0)], [-6, 8, -1, 10],
       r"x=(p+1)e^p+C,\;y=p^2e^p", ode="y-y1^2*exp(y1)", extras=[hline(0, "y=0")])
@@ -291,21 +331,30 @@ explicit("h3-16", "C1*x+C2/x+C3",
 ortho("h3-17", "-y^2/(2*x)", "2*x^2+y^2",
       [K("a", 0.1, 4, 1, n=9, role="level"), K("C", 0.5, 20, 6, n=9, role="level")], [-6, 4, -5, 5],
       r"y^2+2ax=0\;\perp\;2x^2+\tilde y^2=C",
-      ode="y1-y/(2*x)", ode_ortho="y*y1+2*x")
+      ode="y1-y/(2*x)", ode_ortho="y*y1+2*x",
+      a1=[pa("-t^2/(2*a)", "t", "t", [-9, 9])],
+      a2=[pa("sqrt(C/2)*cos(t)", "sqrt(C)*sin(t)", "t", [0, 2 * PI])])
 
 ortho("h3-18", "y/x^n", "x^2+n*y^2",
       [K("a", -3, 3, 1, n=9, role="level"), K("C", 0.5, 12, 4, n=9, role="level"),
        K("n", 0.5, 4, 2, sweep=False, step=0.5)], [-4, 4, -4, 4],
-      r"y=ax^n\;\perp\;x^2+n\tilde y^2=C", ode="y1-n*y/x", ode_ortho="n*y*y1+x")
+      r"y=ax^n\;\perp\;x^2+n\tilde y^2=C", ode="y1-n*y/x", ode_ortho="n*y*y1+x",
+      a1=[ex("a*x^n")],
+      a2=[pa("sqrt(C)*cos(t)", "sqrt(C/n)*sin(t)", "t", [0, 2 * PI])])
 
 ortho("h3-19", "y*exp(-k*x)", "k*y^2+2*x",
       [K("a", -3, 3, 1, n=9, role="level"), K("C", -6, 6, 0, n=9, role="level"),
        K("k", -2, 2, 1, sweep=False, step=0.25)], [-4, 4, -4, 4],
-      r"y=ae^{kx}\;\perp\;k\tilde y^2+2x=C", ode="y1-k*y", ode_ortho="k*y*y1+1")
+      r"y=ae^{kx}\;\perp\;k\tilde y^2+2x=C", ode="y1-k*y", ode_ortho="k*y*y1+1",
+      a1=[ex("a*exp(k*x)")],
+      a2=[pa("(C-k*t^2)/2", "t", "t", [-9, 9])])
 
 ortho("h3-20", "cos(y)*exp(x)", "sin(y)*exp(x)",
       [K("a", -3, 3, 1, n=9, role="level"), K("C", -3, 3, 1, n=9, role="level")], [-3, 3, -4, 4],
-      r"\cos y=ae^{-x}\;\perp\;\sin\tilde y=Ce^{-x}", ode="y1*sin(y)-cos(y)", ode_ortho="y1*cos(y)+sin(y)")
+      r"\cos y=ae^{-x}\;\perp\;\sin\tilde y=Ce^{-x}", ode="y1*sin(y)-cos(y)", ode_ortho="y1*cos(y)+sin(y)",
+      defs=[["g1", "a*exp(-x)"], ["g2", "C*exp(-x)"]],
+      a1=[ex("acos(g1)"), ex("-acos(g1)"), ex("acos(g1)-2*pi"), ex("2*pi-acos(g1)")],
+      a2=[ex("asin(g2)"), ex("pi-asin(g2)"), ex("-pi-asin(g2)")])
 
 
 def sheet_ids(n: int):
