@@ -219,6 +219,58 @@ def curve_lines(spec, curve, env, res=3000):
     return lines
 
 
+def field_vectors(spec, env, nx=25, ny=19):
+    """Pendientes (x, y, m) del campo de direcciones, para cualquier problema.
+
+    * si hay ``slope`` (y' = f(x,y)): se evalúa en una malla;
+    * si no, pero la ``ode`` es de primer orden (implícita en y1: Clairaut, Lagrange...): se resuelve y1 en cada
+      punto (todas las raíces reales: por un punto pueden pasar varias curvas);
+    * si la EDO es de orden superior (y2, y3): no hay campo único; se dibujan las tangentes de la curva elegida.
+    """
+    x0, x1, y0, y1 = spec["window"]
+    GX, GY = np.meshgrid(np.linspace(x0, x1, nx), np.linspace(y0, y1, ny))
+    gx, gy = GX.ravel(), GY.ravel()
+    with np.errstate(all="ignore"):
+        if spec.get("slope"):
+            m = np.broadcast_to(np.asarray(_eval(spec, spec["slope"], env, x=gx, y=gy), float), gx.shape)
+            return gx, gy, np.asarray(m)
+        ode = spec.get("ode") or ""
+        if ode and not re.search(r"\by[23]\b", ode):
+            m_ = 500
+            u = np.linspace(-np.pi / 2 + 1e-3, np.pi / 2 - 1e-3, m_)
+            ones = np.ones((len(gx), m_))
+            f = np.asarray(_eval(spec, ode, env, x=gx[:, None] * ones, y=gy[:, None] * ones, y1=np.tan(u)[None, :] * ones), float)
+            i, j = np.nonzero(np.isfinite(f[:, :-1]) & np.isfinite(f[:, 1:]) & (np.sign(f[:, :-1]) * np.sign(f[:, 1:]) < 0))
+            lo, hi = u[j].copy(), u[j + 1].copy()
+            flo = f[i, j].copy()
+            xs_, ys_ = gx[i], gy[i]
+
+            def F1(uu):
+                return np.asarray(_eval(spec, ode, env, x=xs_, y=ys_, y1=np.tan(uu)), float)
+
+            for _ in range(45):
+                mid = (lo + hi) / 2
+                fm = F1(mid)
+                left = np.sign(fm) == np.sign(flo)
+                lo = np.where(left, mid, lo); flo = np.where(left, fm, flo)
+                hi = np.where(left, hi, mid)
+            root = (lo + hi) / 2
+            good = np.abs(F1(root)) < 0.01 * np.minimum(np.abs(f[i, j]), np.abs(f[i, j + 1]))
+            return xs_[good], ys_[good], np.tan(root[good])
+        if spec["kind"] == "explicit":     # tangentes de la curva elegida (diferencias centrales)
+            xs = np.linspace(x0, x1, 2 * nx)
+            exprs = spec["y"] if isinstance(spec["y"], list) else [spec["y"]]
+            X, Y, M = [], [], []
+            h = (x1 - x0) * 1e-6
+            for e in exprs:
+                yy = np.asarray(_eval(spec, e, env, x=xs), float)
+                d = (np.asarray(_eval(spec, e, env, x=xs + h), float) - np.asarray(_eval(spec, e, env, x=xs - h), float)) / (2 * h)
+                ok = np.isfinite(yy) & np.isfinite(d) & (yy >= y0) & (yy <= y1)
+                X += list(xs[ok]); Y += list(yy[ok]); M += list(d[ok])
+            return np.array(X), np.array(Y), np.array(M)
+    return np.zeros(0), np.zeros(0), np.zeros(0)
+
+
 def level_grid(spec, F, env, res=500, clip=None, levels_hint=1.0):
     x0, x1, y0, y1 = spec["window"]
     xs = np.linspace(x0, x1, res)
@@ -340,13 +392,17 @@ def plot_spec(spec: Mapping, values: Mapping | None = None, ax=None, theme: str 
 
     kind = spec["kind"]
     # ---- campo de direcciones
-    if field and spec.get("slope"):
-        gx, gy = np.meshgrid(np.linspace(x0, x1, 25), np.linspace(y0, y1, 19))
-        m = np.broadcast_to(np.asarray(_eval(spec, spec["slope"], env, x=gx, y=gy), float), gx.shape)
-        ok = np.isfinite(m)
-        norm = np.sqrt(1 + np.where(ok, m, 0) ** 2)
-        ax.quiver(gx[ok], gy[ok], (1 / norm)[ok], (np.where(ok, m, 0) / norm)[ok], color=th["field"], alpha=.55,
-                  angles="xy", pivot="mid", width=0.0028, headwidth=0, headlength=0, headaxislength=0, zorder=1)
+    if field:
+        gx, gy, m = field_vectors(spec, env)
+        groups = [(gx, gy, m, th["field"])]
+        if kind == "ortho" and len(m):
+            with np.errstate(all="ignore"):
+                groups.append((gx, gy, -1.0 / m, th["ortho"]))
+        for fx, fy, fm, col in groups:
+            ok = np.isfinite(fm)
+            norm = np.sqrt(1 + np.where(ok, fm, 0) ** 2)
+            ax.quiver(fx[ok], fy[ok], (1 / norm)[ok], (np.where(ok, fm, 0) / norm)[ok], color=col, alpha=.55,
+                      angles="xy", pivot="mid", width=0.0028, headwidth=0, headlength=0, headaxislength=0, zorder=1)
 
     # ---- familias
     analytic_on = method != "numeric"

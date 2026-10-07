@@ -77,6 +77,9 @@
       }
       this.extras = (s.extras || []).map((c) => this.compileCurve(c, 'explicit'));
       this.slope = s.slope ? this.fn(s.slope, ['x', 'y']) : null;
+      /* campo de direcciones: slope | raíces de la ode en y1 | tangentes de la curva elegida */
+      this.fieldMode = this.slope ? 'slope' : (s.ode && !/\by[23]\b/.test(s.ode)) ? 'roots' : (s.kind === 'explicit' ? 'tangents' : null);
+      if (this.fieldMode === 'roots') this.odeF = this.fn(s.ode, ['x', 'y', 'y1']);
       if (s.particular) {
         const p = s.particular;
         this.part = { label: p.label, values: p.values || null, curve: p.curve ? this.compileCurve(p.curve, 'explicit') : null,
@@ -104,7 +107,7 @@
       };
       tools.append(chip('family', 'Todas las curvas'));
       tools.append(chip('selected', 'Curva elegida'));
-      if (this.slope) { this.opts.field = false; tools.append(chip('field', 'Campo de direcciones')); }
+      if (this.fieldMode) { this.opts.field = false; tools.append(chip('field', 'Campo de direcciones')); }
       if ((s.extras || []).length) tools.append(chip('extras', 'Soluciones singulares'));
       if (this.hasBoth) tools.append(chip('numeric', 'Cálculo numérico (contornos)'));
       if (s.particular) tools.append(chip('particular', 'Solución particular'));
@@ -259,7 +262,7 @@
       this.axes(ctx, th);
       ctx.save(); ctx.beginPath(); ctx.rect(0, 0, this.cssW, this.cssH); ctx.clip();
       try {
-        if (this.opts.field && this.slope) this.drawField(ctx, th);
+        if (this.opts.field && this.fieldMode) this.drawField(ctx, th);
         const sel = this.opts.selected;
         if (s.kind === 'level') {
           const fam = this.fams[0], lc = fam.lc, r = this.levelFamily(fam, env);
@@ -318,17 +321,60 @@
       }
       leg.push([th.par, 'solución particular: ' + (p.label || ''), 3.4]);
     }
-    drawField(ctx, th) {
-      const v = this.view, K = this.K(), nx = 26, ny = 18, len = Math.min(this.cssW / nx, this.cssH / ny) * 0.42;
-      ctx.strokeStyle = th.field; ctx.lineWidth = 1.2; ctx.globalAlpha = .75; ctx.beginPath();
-      for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
-        const x = v.x0 + (i + .5) / nx * (v.x1 - v.x0), y = v.y0 + (j + .5) / ny * (v.y1 - v.y0), m = this.slope(x, y, K);
-        if (!Number.isFinite(m)) continue;
-        const ppx = this.cssW / (v.x1 - v.x0), ppy = this.cssH / (v.y1 - v.y0);
-        const dx = 1 * ppx, dy = -m * ppy, n = Math.hypot(dx, dy) || 1, ux = dx / n * len, uy = dy / n * len, px = this.X(x), py = this.Y(y);
-        ctx.moveTo(px - ux, py - uy); ctx.lineTo(px + ux, py + uy);
+    /* pendientes del campo: [[x, y, m], ...] */
+    fieldPoints() {
+      const v = this.view, K = this.K(), nx = 26, ny = 18, pts = [];
+      if (this.fieldMode === 'slope') {
+        for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+          const x = v.x0 + (i + .5) / nx * (v.x1 - v.x0), y = v.y0 + (j + .5) / ny * (v.y1 - v.y0), m = this.slope(x, y, K);
+          if (Number.isFinite(m)) pts.push([x, y, m]);
+        }
+      } else if (this.fieldMode === 'roots') {
+        const M = 400, U = new Float64Array(M), F = this.odeF, g = (x, y, u) => F(x, y, Math.tan(u), K);
+        for (let k = 0; k < M; k++) U[k] = -Math.PI / 2 + 1e-3 + (Math.PI - 2e-3) * k / (M - 1);
+        for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+          const x = v.x0 + (i + .5) / nx * (v.x1 - v.x0), y = v.y0 + (j + .5) / ny * (v.y1 - v.y0);
+          let fp = g(x, y, U[0]);
+          for (let k = 0; k < M - 1; k++) {
+            const fn = g(x, y, U[k + 1]);
+            if (Number.isFinite(fp) && Number.isFinite(fn) && fp * fn < 0) {
+              let lo = U[k], hi = U[k + 1], flo = fp;
+              for (let it = 0; it < 40; it++) { const mid = (lo + hi) / 2, fm = g(x, y, mid); if (fm * flo > 0) { lo = mid; flo = fm; } else hi = mid; }
+              const r = (lo + hi) / 2;
+              if (Math.abs(g(x, y, r)) < 0.01 * Math.min(Math.abs(fp), Math.abs(fn))) pts.push([x, y, Math.tan(r)]);
+            }
+            fp = fn;
+          }
+        }
+      } else if (this.fieldMode === 'tangents') {
+        const n = 2 * nx, h = (v.x1 - v.x0) * 1e-6, e = this.env;
+        for (const f of this.main.ys) for (let i = 0; i < n; i++) {
+          const x = v.x0 + (i + .5) / n * (v.x1 - v.x0), y = f(x, K);
+          if (!this.main.valid || this.main.valid(x, K) >= 0) {
+            const d = (f(x + h, K) - f(x - h, K)) / (2 * h);
+            if (Number.isFinite(y) && Number.isFinite(d) && y >= v.y0 && y <= v.y1) pts.push([x, y, d]);
+          }
+        }
       }
-      ctx.stroke(); ctx.globalAlpha = 1;
+      return pts;
+    }
+    drawField(ctx, th) {
+      const v = this.view, len = Math.min(this.cssW / 26, this.cssH / 18) * 0.42;
+      const ppx = this.cssW / (v.x1 - v.x0), ppy = this.cssH / (v.y1 - v.y0);
+      const pts = this.fieldPoints();
+      const sets = [[pts, th.field]];
+      if (this.spec.kind === 'ortho') sets.push([pts.map(([x, y, m]) => [x, y, -1 / m]), th.ort]);
+      ctx.lineWidth = 1.2; ctx.globalAlpha = .75;
+      for (const [arr, color] of sets) {
+        ctx.strokeStyle = color; ctx.beginPath();
+        for (const [x, y, m] of arr) {
+          if (!Number.isFinite(m)) continue;
+          const dx = 1 * ppx, dy = -m * ppy, n = Math.hypot(dx, dy) || 1, ux = dx / n * len, uy = dy / n * len, px = this.X(x), py = this.Y(y);
+          ctx.moveTo(px - ux, py - uy); ctx.lineTo(px + ux, py + uy);
+        }
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
     }
     renderLegend(items) {
       this.legend.replaceChildren(...items.map(([color, text, w, a, dashed]) => {

@@ -18,7 +18,8 @@ dibuja las curvas de nivel de F (contornos). Si no hay forma analítica se usa F
 
 Campos comunes: window [x0,x1,y0,y1], consts, extras (curvas singulares),
 particular (solución de un problema de valor inicial), slope (y'=f(x,y), para
-el campo de direcciones) y ode (residuo de la EDO en x,y,y1,y2,y3; sirve para
+el campo de direcciones; si no hay, se resuelve la ``ode`` en y1 por raíces, o se usan las
+tangentes de la curva elegida cuando la EDO es de orden superior) y ode (residuo de la EDO en x,y,y1,y2,y3; sirve para
 validar la solución con ``edoviz.check``).
 """
 from __future__ import annotations
@@ -209,10 +210,12 @@ explicit("h2-04", "C*x-x^2", [K("C", -3, 3, 1)], [-3, 4, -8, 6],
 
 explicit("h2-05", "(x^2+C)/cos(x)", [K("C", -3, 3, 0)], [-4, 4, -8, 8],
          r"y=(x^2+C)\sec x", ode="y1*cos(x)-y*sin(x)-2*x",
-         particular=dict(values={"C": 0}, point=["0", "0"], label="y(0)=0"))
+         particular=dict(values={"C": 0}, point=["0", "0"], label="y(0)=0"),
+      slope="(y*sin(x)+2*x)/cos(x)")
 
 explicit("h2-06", "x^2*(sin(x)+C)", [K("C", -3, 3, 0.5)], [-6, 6, -30, 30],
-         r"y=x^2(\sin x+C)", ode="x*y1-2*y-x^3*cos(x)")
+         r"y=x^2(\sin x+C)", ode="x*y1-2*y-x^3*cos(x)",
+      slope="(2*y+x^3*cos(x))/x")
 
 param("h2-07", "(K*t-t^2)/2", "t", "t", [[-6, 6]], [K("K", -4, 4, 1)], [-8, 6, -5, 5],
       r"2x+y^2=Ky", slope="2*y/(2*x-y^2)", ode="(2*x-y^2)*y1-2*y",
@@ -236,13 +239,16 @@ param("h2-12", "cbrt((t+C)*exp(t))", "t", "t", [[-5, 4]], [K("C", -3, 3, 0)], [-
 
 explicit("h2-13", "(C*exp(exp(x))-1)^2", [K("C", 0.05, 3, 1)], [-3, 2, 0, 12],
          r"y=(Ce^{e^x}-1)^2", valid="C*exp(exp(x))-1", extras=[hline(0, "y=0")],
-         ode="y1-2*y*exp(x)-2*sqrt(y)*exp(x)")
+         ode="y1-2*y*exp(x)-2*sqrt(y)*exp(x)",
+      slope="2*exp(x)*(y+sqrt(y))")
 
 explicit("h2-14", ["sqrt((sin(x)+C)/log(x))", "-sqrt((sin(x)+C)/log(x))"], [K("C", -2, 2, 0.5)], [0, 8, -4, 4],
-         r"y^2=\dfrac{\sin x+C}{\ln x}", ode="2*y*y1*log(x)+y^2/x-cos(x)")
+         r"y^2=\dfrac{\sin x+C}{\ln x}", ode="2*y*y1*log(x)+y^2/x-cos(x)",
+      slope="(cos(x)-y^2/x)/(2*y*log(x))")
 
 explicit("h2-15", ["1/sqrt((C-x)*sin(x))", "-1/sqrt((C-x)*sin(x))"], [K("C", -2, 10, 6)], [-2, 10, -4, 4],
-         r"y^2=\dfrac{1}{(C-x)\sin x}", ode="2*y1*sin(x)+y*cos(x)-y^3*sin(x)^2")
+         r"y^2=\dfrac{1}{(C-x)\sin x}", ode="2*y1*sin(x)+y*cos(x)-y^3*sin(x)^2",
+      slope="(y^3*sin(x)^2-y*cos(x))/(2*sin(x))")
 
 explicit("h2-16", "C/x", [K("C", -4, 4, 1)], [-5, 5, -5, 5], r"y=\pm\dfrac{C}{x}", slope="-y/x")
 
@@ -264,7 +270,8 @@ level("h2-20", "x^3*tan(y)+y^3/x^2+y^4", K("C", -10, 10, 1), [-3, 3, -1.5, 1.5],
 
 # =====================================================================  HOJA 3
 explicit("h3-01", "cbrt(x^2*(C-x*log(x)+x))", [K("C", -6, 6, 1)], [0, 5, -6, 6],
-         r"\dfrac{y^3}{x^2}+x\ln x-x=C", ode="(x^4*log(x)-2*x*y^3)+3*x^2*y^2*y1")
+         r"\dfrac{y^3}{x^2}+x\ln x-x=C", ode="(x^4*log(x)-2*x*y^3)+3*x^2*y^2*y1",
+      slope="(2*x*y^3-x^4*log(x))/(3*x^2*y^2)")
 
 level("h3-02", "(sin(y)+x-1+(sin(x)-cos(x))/2)*exp(x)", K("C", -60, 60, 5, n=14, spacing="symlog"),
       [-4, 4, -4, 4], r"\sin y+x-1+\tfrac{\sin x-\cos x}{2}=Ce^{-x}", slope="-(x+sin(x)+sin(y))/cos(y)",
@@ -333,28 +340,32 @@ ortho("h3-17", "-y^2/(2*x)", "2*x^2+y^2",
       r"y^2+2ax=0\;\perp\;2x^2+\tilde y^2=C",
       ode="y1-y/(2*x)", ode_ortho="y*y1+2*x",
       a1=[pa("-t^2/(2*a)", "t", "t", [-9, 9])],
-      a2=[pa("sqrt(C/2)*cos(t)", "sqrt(C)*sin(t)", "t", [0, 2 * PI])])
+      a2=[pa("sqrt(C/2)*cos(t)", "sqrt(C)*sin(t)", "t", [0, 2 * PI])],
+      slope="y/(2*x)")
 
 ortho("h3-18", "y/x^n", "x^2+n*y^2",
       [K("a", -3, 3, 1, n=9, role="level"), K("C", 0.5, 12, 4, n=9, role="level"),
        K("n", 0.5, 4, 2, sweep=False, step=0.5)], [-4, 4, -4, 4],
       r"y=ax^n\;\perp\;x^2+n\tilde y^2=C", ode="y1-n*y/x", ode_ortho="n*y*y1+x",
       a1=[ex("a*x^n")],
-      a2=[pa("sqrt(C)*cos(t)", "sqrt(C/n)*sin(t)", "t", [0, 2 * PI])])
+      a2=[pa("sqrt(C)*cos(t)", "sqrt(C/n)*sin(t)", "t", [0, 2 * PI])],
+      slope="n*y/x")
 
 ortho("h3-19", "y*exp(-k*x)", "k*y^2+2*x",
       [K("a", -3, 3, 1, n=9, role="level"), K("C", -6, 6, 0, n=9, role="level"),
        K("k", -2, 2, 1, sweep=False, step=0.25)], [-4, 4, -4, 4],
       r"y=ae^{kx}\;\perp\;k\tilde y^2+2x=C", ode="y1-k*y", ode_ortho="k*y*y1+1",
       a1=[ex("a*exp(k*x)")],
-      a2=[pa("(C-k*t^2)/2", "t", "t", [-9, 9])])
+      a2=[pa("(C-k*t^2)/2", "t", "t", [-9, 9])],
+      slope="k*y")
 
 ortho("h3-20", "cos(y)*exp(x)", "sin(y)*exp(x)",
       [K("a", -3, 3, 1, n=9, role="level"), K("C", -3, 3, 1, n=9, role="level")], [-3, 3, -4, 4],
       r"\cos y=ae^{-x}\;\perp\;\sin\tilde y=Ce^{-x}", ode="y1*sin(y)-cos(y)", ode_ortho="y1*cos(y)+sin(y)",
       defs=[["g1", "a*exp(-x)"], ["g2", "C*exp(-x)"]],
       a1=[ex("acos(g1)"), ex("-acos(g1)"), ex("acos(g1)-2*pi"), ex("2*pi-acos(g1)")],
-      a2=[ex("asin(g2)"), ex("pi-asin(g2)"), ex("-pi-asin(g2)")])
+      a2=[ex("asin(g2)"), ex("pi-asin(g2)"), ex("-pi-asin(g2)")],
+      slope="cos(y)/sin(y)")
 
 
 def sheet_ids(n: int):

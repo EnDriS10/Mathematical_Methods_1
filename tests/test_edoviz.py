@@ -42,6 +42,14 @@ def test_numeric_method_still_works(id_):
     plt.close(fig)
 
 
+@pytest.mark.parametrize("id_", IDS)
+def test_every_problem_has_direction_field(id_):
+    from edoviz.plotting import default_values, field_vectors
+    spec = catalog.get(id_)
+    gx, gy, m = field_vectors(spec, default_values(spec))
+    assert len(gx) > 10 and len(gx) == len(m)
+
+
 def test_selected_off_and_analytic_api():
     from edoviz import plot_analytic, plot_orthogonal_analytic
     fig, ax = plot_problem("h1-01", field=True, selected=False)
