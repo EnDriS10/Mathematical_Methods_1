@@ -54,7 +54,8 @@ constantes `pi` y `e`. No hay multiplicación implícita (`2*x`, no `2x`).
 python scripts/export_figures.py --patch
 ```
 
-Crea `figs/h1-01.pdf … h3-20.pdf` (PDF vectorial) y `tex/Metodos_Matematicos_I_con_graficas.tex`: una copia de tu `.tex`
+Crea una figura por ejercicio, `figs/h1-01.pdf … h4-19.pdf` (PDF vectorial), y una **por inciso** cuando el ejercicio los tiene:
+`figs/h4-11-a.pdf`, `h4-11-b.pdf`… (cada una se inserta justo debajo de su inciso en el `.tex`) y `tex/Metodos_Matematicos_I_con_graficas.tex`: una copia de tu `.tex`
 con cada figura al final de su ejercicio (`\includegraphics{../figs/...}`; tu `.tex` original no se modifica).
 Opciones: `--sheets 3`, `--png`. Desde Python: `export_figures(...)`, `patch_latex(...)`; constantes concretas por
 ejercicio con `values={"h3-17": {"a": 2, "C": 8}}`.
@@ -85,18 +86,21 @@ git push -u origin main
 Después, en GitHub: **Settings → Pages → Build and deployment → Source: Deploy from a branch → Branch: `main`, carpeta `/docs`**.
 La web quedará en `https://<tu-usuario>.github.io/<repositorio>/`. No hay que compilar nada: KaTeX (las fórmulas) va incluido en `docs/vendor/`.
 
-## Añadir la Hoja 4 (o cualquier ejercicio nuevo)
+## Añadir la Hoja 5 (o cualquier ejercicio nuevo)
 
-1. Escribe la resolución en `tex/Metodos_Matematicos_I.tex` bajo `\section{Hoja 4}`, con el mismo formato (`\noindent\textbf{1. ...}`).
+1. Escribe la resolución en `tex/Metodos_Matematicos_I.tex` bajo `\section{Hoja 5}`, con el mismo formato (`\noindent\textbf{1. ...}`).
 2. Añade una entrada por ejercicio en `edoviz/catalog.py`. Copia una parecida; los tipos son `level` (implícita),
    `explicit`, `param` y `ortho`:
    ```python
-   level("h4-01", "x^2*y", K("C", -5, 5, 1), [-4, 4, -4, 4], r"x^2y=C", slope="-2*y/x")
-   explicit("h4-02", "C*exp(2*x)", [K("C", -3, 3, 1)], [-2, 2, -6, 6], r"y=Ce^{2x}", slope="2*y")
+   level("h5-01", "x^2*y", K("C", -5, 5, 1), [-4, 4, -4, 4], r"x^2y=C", slope="-2*y/x")
+   explicit("h5-02", "C*exp(2*x)", [K("C", -3, 3, 1)], [-2, 2, -6, 6], r"y=Ce^{2x}", slope="2*y")
    ```
-3. Comprueba que la solución cumple la EDO: `python -m edoviz.check h4-01`
+3. Comprueba que la solución cumple la EDO: `python -m edoviz.check h5-01`
    (derivación simbólica con sympy; si no das `slope`, pasa `ode="..."` con `y1,y2,y3` = derivadas, igualada a 0).
-4. `python scripts/build_site.py`, y de nuevo `git add . && git commit && git push`.
+   Si el ejercicio tiene incisos, una entrada por inciso con el sufijo de la letra (`h4-11-a`, `h4-11-b`…): la web los muestra con un
+   selector y las figuras se llaman igual. Los ejercicios teóricos (sin gráfica) no necesitan entrada.
+4. Añade una descripción breve de la hoja en `config.json` (`"descriptions": {"5": "..."}`); aparece en la tarjeta de inicio y al abrir la hoja.
+5. `python scripts/build_site.py`, y de nuevo `git add . && git commit && git push`.
 
 Campos útiles del catálogo: `extras=[...]` (soluciones singulares, discontinuas), `particular=...` (condición inicial, en verde),
 `slope="..."` (campo de direcciones), `valid="expr"` (dibuja solo donde expr ≥ 0), `aspect="equal"`.
@@ -107,8 +111,8 @@ Campos útiles del catálogo: `extras=[...]` (soluciones singulares, discontinua
 pytest -q
 ```
 
-123 tests: cada una de las 60 soluciones del catálogo **cumple su EDO** (derivación simbólica y evaluación en puntos aleatorios),
-las 60 gráficas se dibujan, el parser de tu `.tex` encuentra los mismos ejercicios que el catálogo y el motor de expresiones de la web (JS)
+Más de 400 tests: cada una de las soluciones del catálogo **cumple su EDO** (derivación simbólica y evaluación en puntos aleatorios),
+todas las gráficas se dibujan, el parser de tu `.tex` encuentra los mismos ejercicios que el catálogo y el motor de expresiones de la web (JS)
 coincide con el de Python.
 
 ## Estructura

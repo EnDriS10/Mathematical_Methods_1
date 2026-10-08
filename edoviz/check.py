@@ -27,15 +27,33 @@ def _sel(c, a, b):
     return sp.Piecewise((a, c > 0), (b, True))
 
 
+class _LogAbs(sp.Function):
+    """log|u| con derivada u'/u (sympy no evalúa bien la derivada de Abs)."""
+    nargs = 1
+
+    def fdiff(self, argindex=1):
+        return 1 / self.args[0]
+
+    def _eval_is_real(self):
+        return True
+
+    def _eval_evalf(self, prec):
+        return sp.log(sp.Abs(self.args[0].evalf(prec))).evalf(prec)
+
+
+def _slog(u):
+    return _LogAbs(u.args[0]) if isinstance(u, sp.Abs) else sp.log(u)
+
+
 _SP = {
     "sin": "sp.sin", "cos": "sp.cos", "tan": "sp.tan", "asin": "sp.asin", "acos": "sp.acos", "atan": "sp.atan",
     "atan2": "sp.atan2", "sinh": "sp.sinh", "cosh": "sp.cosh", "tanh": "sp.tanh", "asinh": "sp.asinh",
-    "acosh": "sp.acosh", "atanh": "sp.atanh", "exp": "sp.exp", "log": "sp.log", "log10": "_log10",
+    "acosh": "sp.acosh", "atanh": "sp.atanh", "exp": "sp.exp", "log": "_slog", "log10": "_log10",
     "log2": "_log2", "sqrt": "sp.sqrt", "cbrt": "_cbrt", "abs": "sp.Abs", "sign": "sp.sign",
     "floor": "sp.floor", "ceil": "sp.ceiling", "min": "sp.Min", "max": "sp.Max",
     "sec": "_sec", "csc": "_csc", "cot": "_cot", "sel": "_sel",
 }
-_NS = dict(sp=sp, _cbrt=_cbrt, _sel=_sel, _log10=lambda u: sp.log(u, 10), _log2=lambda u: sp.log(u, 2),
+_NS = dict(sp=sp, _slog=_slog, _cbrt=_cbrt, _sel=_sel, _log10=lambda u: sp.log(u, 10), _log2=lambda u: sp.log(u, 2),
            _sec=lambda u: 1 / sp.cos(u), _csc=lambda u: 1 / sp.sin(u), _cot=lambda u: 1 / sp.tan(u))
 _CONST_SP = {"pi": "sp.pi", "e": "sp.E", "nan": "sp.nan", "inf": "sp.oo"}
 

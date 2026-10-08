@@ -92,7 +92,9 @@ def to_html(src: str) -> str:
         items = [i.strip() for i in re.split(r"\\item\b", m.group(1)) if i.strip()]
         return "<ul>" + "".join(f"<li>{i}</li>" for i in items) + "</ul>"
 
-    s = re.sub(r"\\begin\{itemize\}(.*?)\\end\{itemize\}", itemize, s, flags=re.S)
+    inner = re.compile(r"\\begin\{itemize\}((?:(?!\\begin\{itemize\}).)*?)\\end\{itemize\}", re.S)
+    while inner.search(s):                                              # listas anidadas: de dentro hacia fuera
+        s = inner.sub(itemize, s)
     s = re.sub(r"\\\\(\[[^\]]*\])?", "<br>", s)
     s = re.sub(r"(?:\s*<br>\s*)+(?=\s*(?:\x00M\d+\x00\s*)?$)", "", s)   # <br> sobrantes al final
     s = s.replace("\x00TRI\x00", TRIANGLE_SVG)
@@ -132,6 +134,7 @@ def parse_tex(path) -> dict:
                 num=num, id=f"h{n}-{num:02d}",
                 statement=to_html(num_m.group(2)),
                 solution=to_html(sol)))
+        problems.sort(key=lambda p: p["num"])                          # el .tex puede traerlos desordenados
         sheets.append(dict(n=n, title=title.strip(), problems=problems))
     return dict(**meta, sheets=sheets)
 

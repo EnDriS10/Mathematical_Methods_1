@@ -77,7 +77,7 @@
     if (opts.strong) { path(fam.sel); ctx.strokeStyle = cssVar('--plot-bg'); ctx.lineWidth = opts.strong + 3.5; ctx.stroke(); ctx.strokeStyle = cssVar('--c-family'); ctx.lineWidth = opts.strong; ctx.stroke(); }
     ctx.restore();
   }
-  const THUMBS = { 1: 'h1-12', 2: 'h2-11', 3: 'h3-10' };
+  const THUMBS = { 1: 'h1-12', 2: 'h2-11', 3: 'h3-10', 4: 'h4-11-j' };
   let homeCleanup = null;
 
   /* Página de inicio: portada con curvas integrales y una tarjeta por hoja */
@@ -106,7 +106,8 @@
         cv,
         el('span', { class: 'card-body' },
           el('span', { class: 'card-title' }, sh.title),
-          el('span', { class: 'card-meta' }, n ? n + (n === 1 ? ' ejercicio' : ' ejercicios') : 'Próximamente')));
+          el('span', { class: 'card-meta' }, n ? n + (n === 1 ? ' ejercicio' : ' ejercicios') : 'Próximamente')),
+        sh.desc ? el('span', { class: 'card-desc' }, sh.desc) : '');
     });
     main.replaceChildren(hero, el('section', { class: 'home' }, el('h2', { class: 'home-title' }, 'Elige una hoja'), el('div', { class: 'cards' }, ...cards)));
     window.scrollTo(0, 0);
@@ -127,6 +128,17 @@
     homeCleanup = () => { cancelAnimationFrame(raf); ro.disconnect(); mo.disconnect(); homeCleanup = null; };
   }
 
+  /* crea (o cambia a) la gráfica de un inciso dentro de su panel */
+  function choose(item, id) {
+    if (item.current === id) return;
+    const host = item.host, spec = catalog[id];
+    if (host.__plot) { host.__plot.destroy(); host.__plot = null; }
+    item.current = id;
+    item.caption.innerHTML = '\\(' + spec.tex + '\\)'; renderMath(item.caption);
+    if (item.tabs) item.tabs.querySelectorAll('button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.id === id)));
+    try { host.__plot = new window.EdoPlot(host, spec); } catch (err) { host.textContent = 'No se pudo dibujar esta gráfica.'; console.error(id, err); }
+  }
+
   function show(sheet) {
     if (observer) observer.disconnect();
     const main = $('#hoja'), idx = $('#indice');
@@ -143,32 +155,40 @@
     idx.replaceChildren(el('p', { class: 'idx-title' }, sheet.title), el('ol', {}, ...sheet.problems.map((p) =>
       el('li', {}, el('a', { href: '#hoja-' + sheet.n + '/' + p.num, 'aria-label': 'Ejercicio ' + p.num }, String(p.num))))));
     const lazy = [];
+    main.append(el('header', { class: 'sheet-head' }, el('h2', {}, sheet.title), sheet.desc ? el('p', {}, sheet.desc) : ''));
     for (const p of sheet.problems) {
-      const spec = catalog[p.id];
+      const ids = p.parts && p.parts.length ? p.parts.filter((i) => catalog[i]) : (catalog[p.id] ? [p.id] : []);
       const card = el('article', { class: 'problem', id: 'p-' + sheet.n + '-' + p.num },
         el('header', { class: 'phead' }, el('span', { class: 'num' }, String(p.num)), el('div', { class: 'statement', html: p.statement })));
-      const body = el('div', { class: 'pbody' });
+      const body = el('div', { class: 'pbody' + (ids.length ? '' : ' solo') });
       const sol = el('details', { class: 'solution', open: true }, el('summary', {}, 'Resolución'), el('div', { class: 'sol-text', html: p.solution }));
       body.append(sol);
-      if (spec) {
-        const panel = el('section', { class: 'panel', 'aria-label': 'Gráfica interactiva del ejercicio ' + p.num },
-          el('p', { class: 'caption', html: '\\(' + spec.tex + '\\)' }));
+      if (ids.length) {
+        const caption = el('p', { class: 'caption', html: '\\(' + catalog[ids[0]].tex + '\\)' });
+        const panel = el('section', { class: 'panel', 'aria-label': 'Gráfica interactiva del ejercicio ' + p.num });
         const host = el('div', { class: 'host' });
-        panel.append(host); body.append(panel);
-        lazy.push([host, spec]);
+        const item = { host, ids, caption, current: null, tabs: null };
+        if (ids.length > 1) {
+          item.tabs = el('div', { class: 'parts', role: 'tablist', 'aria-label': 'Incisos del ejercicio ' + p.num },
+            ...ids.map((id, k) => el('button', { type: 'button', role: 'tab', 'aria-selected': k === 0 ? 'true' : 'false', 'data-id': id,
+              onclick: () => choose(item, id) }, catalog[id].part || String(k + 1))));
+          panel.append(item.tabs);
+        }
+        panel.append(caption, host); body.append(panel);
+        lazy.push(item);
       }
       card.append(body); main.append(card);
     }
     renderMath(main);
     observer = new IntersectionObserver((entries) => {
       for (const e of entries) if (e.isIntersecting) {
-        const item = lazy.find((l) => l[0] === e.target); if (!item || item[0].dataset.ready) continue;
-        item[0].dataset.ready = '1';
-        try { item[0].__plot = new window.EdoPlot(item[0], item[1]); } catch (err) { item[0].textContent = 'No se pudo dibujar esta gráfica.'; console.error(item[1].id, err); }
+        const item = lazy.find((l) => l.host === e.target); if (!item || item.host.dataset.ready) continue;
+        item.host.dataset.ready = '1';
+        choose(item, item.ids[0]);
         observer.unobserve(e.target);
       }
     }, { rootMargin: '400px 0px' });
-    for (const [host] of lazy) observer.observe(host);
+    for (const item of lazy) observer.observe(item.host);
     window.scrollTo(0, 0);
   }
 

@@ -47,7 +47,10 @@ def K(name, lo, hi, value, n=13, sweep=True, step=None, role=None, integer=False
 def _add(id_, kind, tex, window, consts, **kw):
     sheet = int(id_[1])
     num = int(id_.split("-")[1])
+    part = id_.split("-")[2] if id_.count("-") > 1 else None      # inciso: "h4-11-a" -> "a"
     spec = dict(id=id_, sheet=sheet, num=num, kind=kind, tex=tex, window=list(window), consts=consts)
+    if part:
+        spec["part"] = part
     spec.update({k: v for k, v in kw.items() if v is not None})
     SPECS[id_] = spec
     return spec
@@ -366,6 +369,147 @@ ortho("h3-20", "cos(y)*exp(x)", "sin(y)*exp(x)",
       a1=[ex("acos(g1)"), ex("-acos(g1)"), ex("acos(g1)-2*pi"), ex("2*pi-acos(g1)")],
       a2=[ex("asin(g2)"), ex("pi-asin(g2)"), ex("-pi-asin(g2)")],
       slope="cos(y)/sin(y)")
+
+# =====================================================================  HOJA 4
+# EDOs lineales de 2.º orden. Soluciones generales y_h = C1·y1 + C2·y2 (+ y_p). Los problemas con incisos
+# llevan una gráfica por inciso: h4-11-a, h4-11-b, ... (la web los muestra con un selector).
+def _c(lo=-3, hi=3, v1=1, v2=1, n=7):
+    return [K("C1", lo, hi, v1, n=n, label="C₁"), K("C2", lo, hi, v2, n=n, label="C₂")]
+
+
+def _yp0(label="solución particular yₚ"):
+    return dict(values={"C1": 0, "C2": 0}, label=label)
+
+
+explicit("h4-01", "C1+C2*log(x)", _c(), [0, 6, -5, 5], r"y=C_1+C_2\ln x", ode="x*y2+y1")
+explicit("h4-02", "C1*x+C2*x^2", _c(), [-3, 3, -8, 8], r"y=c_1x+c_2x^2", ode="x^2*y2-2*x*y1+2*y")
+explicit("h4-03", "C1*exp(k*x)+C2*exp(-k*x)", _c() + [K("k", 0.1, 2, 1, sweep=False, step=0.05)], [-3, 3, -8, 8],
+         r"y=c_1e^{kx}+c_2e^{-kx}", ode="y2-k^2*y")
+explicit("h4-04", "C1*x+C2*sin(x)", _c(), [-7, 7, -8, 8], r"y=c_1x+c_2\sin x",
+         ode="(x*cos(x)-sin(x))*y2+x*sin(x)*y1-y*sin(x)")
+explicit("h4-06", "C1*exp(x)+C2*exp(-x)", _c(), [-3, 3, -8, 8], r"y=C_1e^{x}+C_2e^{-x}", ode="y2-y")
+
+# 7 · problemas de valor inicial (las constantes arrancan en la solución particular)
+explicit("h4-07-a", "C1*exp(x)+C2*exp(-2*x)", _c(-10, 10, 6, 2), [-1, 2.5, -10, 80], r"y=C_1e^{x}+C_2e^{-2x}",
+         ode="y2+y1-2*y", particular=dict(values={"C1": 6, "C2": 2}, point=["0", "8"], label="y(0)=8, y′(0)=2"))
+explicit("h4-07-b", "C1*exp(x)+C2*exp(-2*x)", _c(-10, 10, 0, 0), [-1, 2.5, -10, 80], r"y=C_1e^{x}+C_2e^{-2x}",
+         ode="y2+y1-2*y", particular=dict(values={"C1": 0, "C2": 0}, point=["1", "0"], label="y(1)=0, y′(1)=0"))
+explicit("h4-07-c", "C1*exp(-2*x)+C2*exp(-3*x)", _c(-6, 6, 4, -3), [-1, 3, -20, 20], r"y=C_1e^{-2x}+C_2e^{-3x}",
+         ode="y2+5*y1+6*y", particular=dict(values={"C1": 4, "C2": -3}, point=["0", "1"], label="y(0)=1, y′(0)=1"))
+explicit("h4-07-d", "C1+C2*exp(-x)", _c(-3, 3, math.exp(-2), -1), [-1, 3, -4, 4], r"y=C_1+C_2e^{-x}",
+         ode="y2+y1", particular=dict(values={"C1": math.exp(-2), "C2": -1}, point=["2", "0"], label="y(2)=0, y′(2)=1/e²"))
+
+explicit("h4-08", "C1*sin(x)+C2*cos(x)", _c(), [-7, 7, -4, 4], r"y=C_1\sin x+C_2\cos x", ode="y2+y")
+explicit("h4-09", "C1+C2/x^2", _c(), [-4, 4, -5, 5], r"y=C_1+\dfrac{C_2}{x^2}", ode="x*y2+3*y1")
+explicit("h4-10", "C1*exp(x)+C2*x^2*exp(x)", _c(), [-3, 3, -10, 20], r"y=C_1e^x+C_2x^2e^x",
+         ode="x*y2-(2*x+1)*y1+(x+1)*y")
+
+# 11 · coeficientes constantes: (letra, y, EDO, ventana, tex)
+for _l, _y, _ode, _w, _t in [
+    ("a", "(C1+C2*x)*exp(2*x)", "y2-4*y1+4*y", [-2, 2, -10, 10], r"y=(C_1+C_2x)e^{2x}"),
+    ("b", "C1*exp(4*x)+C2*exp(5*x)", "y2-9*y1+20*y", [-1, 1, -10, 10], r"y=C_1e^{4x}+C_2e^{5x}"),
+    ("c", "exp(-x/2)*(C1*cos(sqrt(5)/2*x)+C2*sin(sqrt(5)/2*x))", "2*y2+2*y1+3*y", [-4, 6, -6, 6],
+     r"y=e^{-x/2}\left(C_1\cos\frac{\sqrt5}{2}x+C_2\sin\frac{\sqrt5}{2}x\right)"),
+    ("d", "(C1+C2*x)*exp(3*x/2)", "4*y2-12*y1+9*y", [-2, 2, -10, 10], r"y=(C_1+C_2x)e^{3x/2}"),
+    ("e", "C1+C2*exp(-x)", "y2+y1", [-2, 3, -8, 8], r"y=C_1+C_2e^{-x}"),
+    ("f", "exp(3*x)*(C1*cos(4*x)+C2*sin(4*x))", "y2-6*y1+25*y", [-2, 1, -10, 10], r"y=e^{3x}(C_1\cos 4x+C_2\sin 4x)"),
+    ("g", "(C1+C2*x)*exp(-5*x/2)", "4*y2+20*y1+25*y", [-2, 2, -10, 10], r"y=(C_1+C_2x)e^{-5x/2}"),
+    ("h", "exp(-x)*(C1*cos(sqrt(2)*x)+C2*sin(sqrt(2)*x))", "y2+2*y1+3*y", [-3, 4, -8, 8],
+     r"y=e^{-x}(C_1\cos\sqrt2x+C_2\sin\sqrt2x)"),
+    ("i", "C1*exp(2*x)+C2*exp(-2*x)", "y2-4*y", [-2, 2, -8, 8], r"y=C_1e^{2x}+C_2e^{-2x}"),
+    ("j", "exp(x)*(C1*cos(sqrt(3)/2*x)+C2*sin(sqrt(3)/2*x))", "4*y2-8*y1+7*y", [-3, 3, -8, 8],
+     r"y=e^{x}\left(C_1\cos\frac{\sqrt3}{2}x+C_2\sin\frac{\sqrt3}{2}x\right)"),
+    ("k", "C1*exp(x/2)+C2*exp(-x)", "2*y2+y1-y", [-3, 3, -8, 8], r"y=C_1e^{x/2}+C_2e^{-x}"),
+    ("l", "(C1+C2*x)*exp(x/4)", "16*y2-8*y1+y", [-4, 6, -6, 6], r"y=(C_1+C_2x)e^{x/4}"),
+    ("m", "exp(-2*x)*(C1*cos(x)+C2*sin(x))", "y2+4*y1+5*y", [-2, 4, -8, 8], r"y=e^{-2x}(C_1\cos x+C_2\sin x)"),
+    ("n", "C1*exp(x)+C2*exp(-5*x)", "y2+4*y1-5*y", [-2, 2, -8, 8], r"y=C_1e^{x}+C_2e^{-5x}"),
+]:
+    explicit(f"h4-11-{_l}", _y, _c(), _w, _t, ode=_ode)
+
+# 12 · problemas de valor inicial
+_E = math.exp
+for _l, _y, _ode, _w, _t, _v, _pt, _lab, _r in [
+    ("a", "C1*exp(2*x)+C2*exp(3*x)", "y2-5*y1+6*y", [-2, 1.8, -5, 60], r"y=C_1e^{2x}+C_2e^{3x}",
+     (0, _E(-1)), ("1", "exp(2)"), "y(1)=e², y′(1)=3e²", 4),
+    ("b", "C1*exp(x)+C2*exp(5*x)", "y2-6*y1+5*y", [-2, 1, -5, 60], r"y=C_1e^{x}+C_2e^{5x}", (1, 2), ("0", "3"),
+     "y(0)=3, y′(0)=11", 4),
+    ("c", "(C1+C2*x)*exp(3*x)", "y2-6*y1+9*y", [-1, 1.5, -5, 60], r"y=(C_1+C_2x)e^{3x}", (0, 5), ("0", "0"),
+     "y(0)=0, y′(0)=5", 6),
+    ("d", "exp(-2*x)*(C1*cos(x)+C2*sin(x))", "y2+4*y1+5*y", [-1, 4, -4, 16], r"y=e^{-2x}(C_1\cos x+C_2\sin x)", (1, 2),
+     ("0", "1"), "y(0)=1, y′(0)=0", 4),
+    ("e", "C1*exp((-2+sqrt(2))*x)+C2*exp((-2-sqrt(2))*x)", "y2+4*y1+2*y", [-1, 2, -10, 10],
+     r"y=C_1e^{(-2+\sqrt2)x}+C_2e^{(-2-\sqrt2)x}", (1, -2), ("0", "-1"), "y(0)=−1, y′(0)=2+3√2", 4),
+    ("f", "C1*exp(x-1)+C2*exp(-9*(x-1))", "y2+8*y1-9*y", [0, 3, -1, 12], r"y=C_1e^{x-1}+C_2e^{-9(x-1)}", (9 / 5, 1 / 5),
+     ("1", "2"), "y(1)=2, y′(1)=0", 4),
+]:
+    explicit(f"h4-12-{_l}", _y, [K("C1", -_r, _r, _v[0], n=7, label="C₁"), K("C2", -_r, _r, _v[1], n=7, label="C₂")], _w, _t,
+             ode=_ode, particular=dict(values={"C1": _v[0], "C2": _v[1]}, point=list(_pt), label=_lab))
+
+# 13 · Euler (x>0)
+for _l, _y, _ode, _w, _t in [
+    ("a", "C1*x^(3/2)+C2*x^(-1/2)", "4*x^2*y2-3*y", [0, 4, -8, 8], r"y=C_1x^{3/2}+C_2x^{-1/2}"),
+    ("b", "(C1+C2*log(x))*x^2", "x^2*y2-3*x*y1+4*y", [0, 3, -10, 10], r"y=(C_1+C_2\ln x)x^2"),
+    ("c", "C1*x^2+C2*x^(-3)", "x^2*y2+2*x*y1-6*y", [0, 3, -10, 10], r"y=C_1x^2+C_2x^{-3}"),
+    ("d", "x^(-1/2)*(C1*cos(sqrt(11)/2*log(x))+C2*sin(sqrt(11)/2*log(x)))", "x^2*y2+2*x*y1+3*y", [0, 6, -5, 5],
+     r"y=x^{-1/2}\left(C_1\cos\left(\frac{\sqrt{11}}{2}\ln x\right)+C_2\sin\left(\frac{\sqrt{11}}{2}\ln x\right)\right)"),
+    ("e", "C1*x^sqrt(2)+C2*x^(-sqrt(2))", "x^2*y2+x*y1-2*y", [0, 4, -8, 8], r"y=C_1x^{\sqrt2}+C_2x^{-\sqrt2}"),
+    ("f", "C1*x^4+C2*x^(-4)", "x^2*y2+x*y1-16*y", [0, 2, -8, 8], r"y=C_1x^4+C_2x^{-4}"),
+]:
+    explicit(f"h4-13-{_l}", _y, _c(), _w, _t, ode=_ode)
+
+explicit("h4-15-a", "exp(-x^2/4)*(C1*cos(sqrt(3)*x^2/4)+C2*sin(sqrt(3)*x^2/4))", _c(), [-5, 5, -4, 4],
+         r"y=e^{-x^2/4}\left(C_1\cos\frac{\sqrt3x^2}{4}+C_2\sin\frac{\sqrt3x^2}{4}\right)",
+         ode="x*y2+(x^2-1)*y1+x^3*y")
+
+# 16 · no homogéneas (solución general)
+for _l, _y, _ode, _w, _t in [
+    ("a", "C1*exp(3*x)+C2*exp(-2*x)-4*x*exp(-2*x)", "y2-y1-6*y-20*exp(-2*x)", [-2, 1.5, -15, 15],
+     r"y=C_1e^{3x}+C_2e^{-2x}-4xe^{-2x}"),
+    ("b", "C1*exp(x)+C2*exp(2*x)+3*cos(2*x)+2*sin(2*x)", "y2-3*y1+2*y-(14*sin(2*x)-18*cos(2*x))", [-3, 1.5, -15, 15],
+     r"y=C_1e^{x}+C_2e^{2x}+3\cos 2x+2\sin 2x"),
+    ("c", "C1*cos(x)+C2*sin(x)+x*sin(x)", "y2+y-2*cos(x)", [-8, 8, -10, 10], r"y=C_1\cos x+C_2\sin x+x\sin x"),
+    ("d", "C1+C2*exp(2*x)-3*x^2+2*x", "y2-2*y1-(12*x-10)", [-3, 3, -20, 20], r"y=C_1+C_2e^{2x}-3x^2+2x"),
+    ("e", "(C1+C2*x+3*x^2)*exp(x)", "y2-2*y1+y-6*exp(x)", [-3, 2, -20, 20], r"y=(C_1+C_2x+3x^2)e^x"),
+    ("f", "exp(x)*(C1*cos(x)+C2*sin(x))-x*exp(x)*cos(x)/2", "y2-2*y1+2*y-exp(x)*sin(x)", [-5, 3, -15, 15],
+     r"y=e^x(C_1\cos x+C_2\sin x)-\tfrac12xe^x\cos x"),
+    ("g", "C1+C2*exp(-x)+2*x^5-10*x^4+40*x^3-120*x^2+242*x", "y2+y1-(10*x^4+2)", [-1.2, 2.5, -250, 300],
+     r"y=C_1+C_2e^{-x}+2x^5-10x^4+40x^3-120x^2+242x"),
+    ("h", "C1*cos(3*x)+C2*sin(3*x)-x*cos(3*x)/3+sin(x)/2-2*exp(-2*x)+3*x^3-2*x",
+     "y2+9*y-(2*sin(3*x)+4*sin(x)-26*exp(-2*x)+27*x^3)", [-4, 4, -50, 50],
+     r"y=C_1\cos3x+C_2\sin3x-\tfrac13x\cos3x+\tfrac12\sin x-2e^{-2x}+3x^3-2x"),
+]:
+    explicit(f"h4-16-{_l}", _y, _c(), _w, _t, ode=_ode)
+
+# 17 · variación de parámetros: yₚ + C1·y1 + C2·y2 (la curva destacada en verde es yₚ)
+for _l, _yp, _y1, _y2, _ode, _w, _t in [
+    ("a", "-cos(2*x)*log(abs(sec(2*x)+tan(2*x)))/4", "cos(2*x)", "sin(2*x)", "y2+4*y-tan(2*x)", [-2, 2, -3, 3],
+     r"y''+4y=\tan 2x"),
+    ("b", "x^2*exp(-x)*log(x)/2-3*x^2*exp(-x)/4", "exp(-x)", "x*exp(-x)", "y2+2*y1+y-exp(-x)*log(x)", [0, 5, -3, 3],
+     r"y''+2y'+y=e^{-x}\ln x"),
+    ("c", "(-8*x^2-4*x)*exp(-x)", "exp(3*x)", "exp(-x)", "y2-2*y1-3*y-64*x*exp(-x)", [-2, 2, -30, 30],
+     r"y''-2y'-3y=64xe^{-x}"),
+    ("d", "exp(-x)*(cos(2*x)*log(abs(cos(2*x)))/4+x*sin(2*x)/2)", "exp(-x)*cos(2*x)", "exp(-x)*sin(2*x)",
+     "y2+2*y1+5*y-exp(-x)*sec(2*x)", [-1.5, 3, -4, 4], r"y''+2y'+5y=e^{-x}\sec 2x"),
+    ("e", "exp(-3*x)/10", "exp(-x/2)", "exp(-x)", "2*y2+3*y1+y-exp(-3*x)", [-1, 3, -3, 3], r"2y''+3y'+y=e^{-3x}"),
+    ("f", "(exp(x)+exp(2*x))*log(1+exp(-x))-exp(x)", "exp(x)", "exp(2*x)", "y2-3*y1+2*y-1/(1+exp(-x))", [-3, 3, -6, 12],
+     r"y''-3y'+2y=\dfrac{1}{1+e^{-x}}"),
+]:
+    explicit(f"h4-17-{_l}", f"({_yp})+C1*({_y1})+C2*({_y2})", _c(-2, 2, 0, 0, n=5), _w, _t, ode=_ode, particular=_yp0())
+
+# 18 · y'' + y = f(x): yₚ + C1 cos x + C2 sin x
+for _l, _yp, _f, _w, _t in [
+    ("a", "cos(x)*log(abs(cos(x)))+x*sin(x)", "1/cos(x)", [-6.3, 6.3, -6, 6], r"y''+y=\sec x"),
+    ("b", "cos(x)*log(abs(csc(x)+cot(x)))-2", "cos(x)^2/sin(x)^2", [-6.3, 6.3, -6, 6], r"y''+y=\cot^2x"),
+    ("c", "cos(x)*log(abs(sec(x)+tan(x)))/2-sin(x)*log(abs(csc(x)+cot(x)))/2", "cos(2*x)/sin(2*x)", [-6.3, 6.3, -6, 6],
+     r"y''+y=\cot 2x"),
+    ("d", "x^2*sin(x)/4+x*cos(x)/4", "x*cos(x)", [-8, 8, -12, 12], r"y''+y=x\cos x"),
+    ("e", "-cos(x)*log(abs(sec(x)+tan(x)))", "tan(x)", [-6.3, 6.3, -6, 6], r"y''+y=\tan x"),
+    ("f", "x*cos(x)+sin(x)*log(abs(sec(x)))", "sin(x)/cos(x)^2", [-6.3, 6.3, -6, 6], r"y''+y=\sec x\tan x"),
+    ("g", "-cos(x)*log(abs(sec(x)+tan(x)))-sin(x)*log(abs(csc(x)+cot(x)))", "1/(cos(x)*sin(x))", [-6.3, 6.3, -6, 6],
+     r"y''+y=\sec x\csc x"),
+]:
+    explicit(f"h4-18-{_l}", f"({_yp})+C1*cos(x)+C2*sin(x)", _c(-2, 2, 0, 0, n=5), _w, _t, ode=f"y2+y-({_f})",
+             particular=_yp0())
 
 
 def sheet_ids(n: int):

@@ -1,5 +1,11 @@
 {
   "name": "César Acosta",
   "course": "Métodos Matemáticos I",
-  "tex": "tex/Metodos_Matematicos_I.tex"
+  "tex": "tex/Metodos_Matematicos_I.tex",
+  "descriptions": {
+    "1": "EDOs de primer orden: variables separables, cambios de variable, homogéneas y reducibles a homogéneas.",
+    "2": "EDOs de primer orden: exactas, lineales, Bernoulli y ecuaciones integrales.",
+    "3": "EDOs exactas, no resueltas en y′ (Lagrange, Clairaut), Riccati, EDO de una familia de curvas y trayectorias ortogonales.",
+    "4": "EDOs lineales de segundo orden: Wronskiano, coeficientes constantes, Euler, coeficientes indeterminados y variación de parámetros."
+  }
 }

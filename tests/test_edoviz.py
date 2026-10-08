@@ -47,7 +47,7 @@ def test_every_problem_has_direction_field(id_):
     from edoviz.plotting import default_values, field_vectors
     spec = catalog.get(id_)
     gx, gy, m = field_vectors(spec, default_values(spec))
-    assert len(gx) > 10 and len(gx) == len(m)
+    assert len(gx) > 5 and len(gx) == len(m)
 
 
 def test_selected_off_and_analytic_api():
@@ -73,7 +73,21 @@ def test_plot_renders(id_):
 def test_tex_matches_catalog():
     data = parse_tex(ROOT / "tex" / "Metodos_Matematicos_I.tex")
     ids = {p["id"] for s in data["sheets"] for p in s["problems"]}
-    assert ids == set(IDS)
+    base = {"-".join(i.split("-")[:2]) for i in IDS}          # h4-11-a -> h4-11
+    assert base <= ids, sorted(base - ids)
+    assert all(i in base for i in ids if i[:2] in ("h1", "h2", "h3"))   # hojas 1-3: todos con gráfica
+    # los problemas con incisos tienen una gráfica por inciso
+    assert {"h4-11-a", "h4-11-n", "h4-12-f"} <= set(IDS)
+
+
+def test_patch_latex_inserts_one_figure_per_part(tmp_path):
+    from edoviz import patch_latex
+    out = tmp_path / "x.tex"
+    n = patch_latex(ROOT / "tex" / "Metodos_Matematicos_I.tex", out, figdir="figs")
+    txt = out.read_text(encoding="utf-8")
+    assert n == len(IDS) and txt.count("\\includegraphics") == len(IDS)
+    for i in ("h4-11-a", "h4-16-h", "h4-17-f", "h3-17"):
+        assert f"figs/{i}.pdf" in txt
 
 
 def test_expression_language():

@@ -46,7 +46,16 @@
       this._ro.observe(this.stage);
       this._mo = new MutationObserver(() => this.draw());
       this._mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-      matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => this.draw());
+      matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (!this._dead) this.draw(); });
+    }
+
+    /* libera observadores y vacía el contenedor (al cambiar de inciso) */
+    destroy() {
+      if (this._ro) this._ro.disconnect();
+      if (this._mo) this._mo.disconnect();
+      if (this._raf) cancelAnimationFrame(this._raf);
+      this._dead = true;
+      this.root.replaceChildren(); this.root.classList.remove('edo-plot');
     }
 
     /* ------------------------------------------------------------ compilación */
@@ -257,6 +266,7 @@
       this._raf = requestAnimationFrame(() => { this._raf = 0; this.render(); });
     }
     render() {
+      if (this._dead) return;
       const s = this.spec, ctx = this.canvas.getContext('2d'), th = this.theme(), env = this.env, leg = [];
       ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
       this.axes(ctx, th);
