@@ -120,6 +120,18 @@ body.is-home .who { display: none; }
 .empty { background: var(--panel); border: 1px dashed var(--rule); border-radius: 16px; padding: 4rem 1.5rem; }
 .soon-msg { margin: 0; text-align: center; font: 600 1.6rem var(--serif); color: var(--muted); }
 
+[hidden] { display: none !important; }
+/* botón grande Resolución: pliega resolución + gráfica */
+.sol-toggle { display: flex; align-items: center; gap: .75rem; width: 100%; min-height: 3.2rem; padding: .7rem 1.4rem; font: 600 1.08rem var(--sans); color: var(--ink); text-align: left; cursor: pointer;
+  background: color-mix(in srgb, var(--accent) 7%, var(--panel)); border: 0; border-top: 1px solid var(--rule); transition: background .15s; }
+.sol-toggle:hover { background: color-mix(in srgb, var(--accent) 14%, var(--panel)); }
+.sol-toggle[aria-expanded="false"] { border-radius: 0 0 10px 10px; }
+.sol-toggle .chev { width: .6rem; height: .6rem; border-right: 2.5px solid var(--accent); border-bottom: 2.5px solid var(--accent); transform: rotate(45deg); margin: -.2rem .15rem 0; transition: transform .15s; }
+.sol-toggle[aria-expanded="false"] .chev { transform: rotate(-45deg); margin: 0 .15rem 0 0; }
+.inciso { border-top: 1px solid var(--rule); margin-top: .6rem; }
+.inciso-stmt { padding: 1rem 1.4rem .9rem; font-size: 1.08rem; font-weight: 600; overflow-x: auto; overflow-y: hidden; }
+.intro, .outro { padding: 1rem 1.4rem 0; max-width: none; }
+.intro .katex-display, .outro .katex-display { overflow-x: auto; }
 /* descripción de hoja · incisos · ejercicios sin gráfica */
 .sheet-head { margin: 0 0 1.4rem; }
 .sheet-head h2 { margin: 0; font: 600 1.9rem/1.15 var(--serif); }
@@ -127,8 +139,8 @@ body.is-home .who { display: none; }
 .card-desc { padding: 0 1.2rem 1.15rem; color: var(--muted); font: .88rem/1.45 var(--sans); }
 .pbody.solo { grid-template-columns: minmax(0, 1fr); }
 .pbody.solo .sol-text { max-width: none; }
-.parts { display: flex; flex-wrap: wrap; gap: .3rem; margin: 0 0 .6rem; justify-content: center; }
-.parts button { min-width: 2.1rem; min-height: 2.1rem; padding: 0 .55rem; font: 600 .88rem var(--sans); color: var(--muted); background: none; border: 1px solid var(--rule); border-radius: 8px; cursor: pointer; }
+.parts { display: flex; flex-wrap: wrap; gap: .4rem; padding: .9rem 1.4rem .2rem; }
+.parts button { min-width: 2.6rem; min-height: 2.6rem; padding: 0 .7rem; font: 600 1rem var(--sans); color: var(--muted); background: none; border: 1px solid var(--rule); border-radius: 8px; cursor: pointer; }
 .parts button:hover { color: var(--ink); border-color: var(--muted); }
 .parts button[aria-selected="true"] { color: var(--ink); background: color-mix(in srgb, var(--accent) 16%, transparent); border-color: var(--accent); }
 
@@ -182,7 +194,9 @@ body.is-home .who { display: none; }
   .card-title { font-size: 1.2rem; } .card-meta { font-size: .85rem; }
   .card-desc { padding: 0 .85rem .9rem; font-size: .8rem; }
   .sheet-head h2 { font-size: 1.5rem; } .sheet-head p { font-size: .95rem; }
-  .parts button { min-width: 2.5rem; min-height: 2.5rem; }
+  .parts { padding: .8rem .8rem .1rem; } .parts button { min-width: 2.6rem; min-height: 2.6rem; }
+  .sol-toggle { padding: .8rem 1rem; min-height: 3.3rem; font-size: 1.05rem; }
+  .inciso-stmt { padding: .9rem 1rem .8rem; font-size: 1.02rem; } .intro, .outro { padding: .9rem 1rem 0; }
 }
 @media (max-width: 360px) { .cards { grid-template-columns: minmax(0, 1fr); } }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; } }

@@ -128,15 +128,105 @@
     homeCleanup = () => { cancelAnimationFrame(raf); ro.disconnect(); mo.disconnect(); homeCleanup = null; };
   }
 
-  /* crea (o cambia a) la gráfica de un inciso dentro de su panel */
-  function choose(item, id) {
-    if (item.current === id) return;
-    const host = item.host, spec = catalog[id];
+  /* ---------- ejercicios ---------- */
+  const tex$ = (t) => '\\(' + t + '\\)';
+
+  /* gráfica del panel: crea la del inciso elegido (o la quita si ese inciso no tiene) */
+  function sync(item) {
+    const host = item.host;
+    if (!item.ready) return;
     if (host.__plot) { host.__plot.destroy(); host.__plot = null; }
-    item.current = id;
-    item.caption.innerHTML = '\\(' + spec.tex + '\\)'; renderMath(item.caption);
-    if (item.tabs) item.tabs.querySelectorAll('button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.id === id)));
+    const id = item.want, spec = id && catalog[id];
+    item.panel.hidden = !spec;
+    item.body.classList.toggle('solo', !spec);
+    if (!spec) return;
+    item.caption.innerHTML = tex$(spec.tex); renderMath(item.caption);
     try { host.__plot = new window.EdoPlot(host, spec); } catch (err) { host.textContent = 'No se pudo dibujar esta gráfica.'; console.error(id, err); }
+  }
+
+  /* botón grande «Resolución»: pliega la resolución y la gráfica y deja solo el enunciado */
+  function toggleButton(target, label) {
+    const b = el('button', { type: 'button', class: 'sol-toggle', 'aria-expanded': 'true' },
+      el('span', { class: 'chev', 'aria-hidden': 'true' }), el('span', { class: 'lbl' }, label || 'Resolución'));
+    b.addEventListener('click', () => {
+      const open = b.getAttribute('aria-expanded') !== 'true';
+      b.setAttribute('aria-expanded', String(open)); target.hidden = !open;
+    });
+    return b;
+  }
+
+  /* Si la resolución trae una lista con incisos «(a) … (b) …», la separa en {intro, items:[{letter, stmt, sol}], outro} */
+  function splitParts(html) {
+    const tpl = document.createElement('template'); tpl.innerHTML = html;
+    const uls = [...tpl.content.children].filter((n) => n.tagName === 'UL');
+    for (const ul of uls) {
+      const lis = [...ul.children].filter((n) => n.tagName === 'LI');
+      const ok = lis.length > 1 && lis.every((li) => { const st = li.querySelector(':scope > strong'); return st && /^\(\w+\)/.test(st.textContent.trim()); });
+      if (!ok) continue;
+      const items = lis.map((li) => {
+        const c = li.cloneNode(true), st = c.querySelector(':scope > strong'), stmt = st.innerHTML;
+        const letter = /^\((\w+)\)/.exec(st.textContent.trim())[1];
+        st.remove();
+        return { letter, stmt, sol: c.innerHTML.replace(/^(\s|<br>)+/, '') };
+      });
+      const before = [], after = []; let seen = false;
+      for (const n of tpl.content.childNodes) { if (n === ul) { seen = true; continue; } (seen ? after : before).push(n.cloneNode(true)); }
+      const wrap = (arr) => { const d = document.createElement('div'); arr.forEach((n) => d.append(n)); return d.innerHTML.trim(); };
+      return { intro: wrap(before), items, outro: wrap(after) };
+    }
+    return null;
+  }
+
+  function buildProblem(sheet, p, lazy) {
+    const partIds = (p.parts || []).filter((i) => catalog[i]);
+    const split = partIds.length ? splitParts(p.solution) : null;
+    const card = el('article', { class: 'problem', id: 'p-' + sheet.n + '-' + p.num },
+      el('header', { class: 'phead' }, el('span', { class: 'num' }, String(p.num)), el('div', { class: 'statement', html: p.statement })));
+
+    const mkPanel = (hasPlot, firstId) => {
+      const caption = el('p', { class: 'caption' }), host = el('div', { class: 'host' });
+      const panel = el('section', { class: 'panel', 'aria-label': 'Gráfica interactiva del ejercicio ' + p.num }, caption, host);
+      return { caption, host, panel };
+    };
+
+    if (split) {                                        // ---- ejercicio con incisos
+      if (split.intro) card.append(el('div', { class: 'intro sol-text', html: split.intro }));
+      const solText = el('div', { class: 'sol-text' });
+      const { caption, host, panel } = mkPanel();
+      const body = el('div', { class: 'pbody' }, solText, panel);
+      const stmt = el('div', { class: 'inciso-stmt' });
+      const item = { host, caption, panel, body, want: null, ready: false };
+      const toggle = toggleButton(body);
+      const tabs = el('div', { class: 'parts', role: 'tablist', 'aria-label': 'Incisos del ejercicio ' + p.num },
+        ...split.items.map((it, k) => el('button', { type: 'button', role: 'tab', 'aria-selected': 'false', 'data-k': k, onclick: () => select(k) }, it.letter)));
+      const select = (k) => {
+        const it = split.items[k];
+        tabs.querySelectorAll('button').forEach((b) => b.setAttribute('aria-selected', String(+b.dataset.k === k)));
+        stmt.innerHTML = it.stmt; solText.innerHTML = it.sol;
+        body.hidden = false; toggle.setAttribute('aria-expanded', 'true');
+        item.want = catalog[p.id + '-' + it.letter] ? p.id + '-' + it.letter : null;
+        panel.hidden = !item.want; body.classList.toggle('solo', !item.want);
+        renderMath(stmt); renderMath(solText);
+        sync(item);
+      };
+      card.append(tabs, el('div', { class: 'inciso' }, stmt, toggle, body));
+      if (split.outro) card.append(el('div', { class: 'outro sol-text', html: split.outro }));
+      select(0);
+      lazy.push(item);
+      return card;
+    }
+
+    // ---- ejercicio sin incisos (con o sin gráfica)
+    const hasPlot = !!catalog[p.id];
+    const solText = el('div', { class: 'sol-text', html: p.solution });
+    const body = el('div', { class: 'pbody' + (hasPlot ? '' : ' solo') }, solText);
+    card.append(toggleButton(body), body);
+    if (hasPlot) {
+      const { caption, host, panel } = mkPanel();
+      body.append(panel);
+      lazy.push({ host, caption, panel, body, want: p.id, ready: false });
+    }
+    return card;
   }
 
   function show(sheet) {
@@ -156,35 +246,13 @@
       el('li', {}, el('a', { href: '#hoja-' + sheet.n + '/' + p.num, 'aria-label': 'Ejercicio ' + p.num }, String(p.num))))));
     const lazy = [];
     main.append(el('header', { class: 'sheet-head' }, el('h2', {}, sheet.title), sheet.desc ? el('p', {}, sheet.desc) : ''));
-    for (const p of sheet.problems) {
-      const ids = p.parts && p.parts.length ? p.parts.filter((i) => catalog[i]) : (catalog[p.id] ? [p.id] : []);
-      const card = el('article', { class: 'problem', id: 'p-' + sheet.n + '-' + p.num },
-        el('header', { class: 'phead' }, el('span', { class: 'num' }, String(p.num)), el('div', { class: 'statement', html: p.statement })));
-      const body = el('div', { class: 'pbody' + (ids.length ? '' : ' solo') });
-      const sol = el('details', { class: 'solution', open: true }, el('summary', {}, 'Resolución'), el('div', { class: 'sol-text', html: p.solution }));
-      body.append(sol);
-      if (ids.length) {
-        const caption = el('p', { class: 'caption', html: '\\(' + catalog[ids[0]].tex + '\\)' });
-        const panel = el('section', { class: 'panel', 'aria-label': 'Gráfica interactiva del ejercicio ' + p.num });
-        const host = el('div', { class: 'host' });
-        const item = { host, ids, caption, current: null, tabs: null };
-        if (ids.length > 1) {
-          item.tabs = el('div', { class: 'parts', role: 'tablist', 'aria-label': 'Incisos del ejercicio ' + p.num },
-            ...ids.map((id, k) => el('button', { type: 'button', role: 'tab', 'aria-selected': k === 0 ? 'true' : 'false', 'data-id': id,
-              onclick: () => choose(item, id) }, catalog[id].part || String(k + 1))));
-          panel.append(item.tabs);
-        }
-        panel.append(caption, host); body.append(panel);
-        lazy.push(item);
-      }
-      card.append(body); main.append(card);
-    }
+    for (const p of sheet.problems) main.append(buildProblem(sheet, p, lazy));
     renderMath(main);
     observer = new IntersectionObserver((entries) => {
       for (const e of entries) if (e.isIntersecting) {
-        const item = lazy.find((l) => l.host === e.target); if (!item || item.host.dataset.ready) continue;
-        item.host.dataset.ready = '1';
-        choose(item, item.ids[0]);
+        const item = lazy.find((l) => l.host === e.target); if (!item || item.ready) continue;
+        item.ready = true; item.host.dataset.ready = '1';
+        sync(item);
         observer.unobserve(e.target);
       }
     }, { rootMargin: '400px 0px' });

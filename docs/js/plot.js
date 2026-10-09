@@ -111,7 +111,7 @@
       const chip = (key, text) => {
         const id = 'c' + Math.random().toString(36).slice(2, 8);
         const input = el('input', { type: 'checkbox', id, checked: this.opts[key] });
-        input.addEventListener('change', () => { this.opts[key] = input.checked; this.draw(); });
+        input.addEventListener('change', () => { this.opts[key] = input.checked; if (key === 'selected') this.syncControls(); this.draw(); });
         return el('label', { class: 'chip', for: id }, input, el('span', {}, text));
       };
       tools.append(chip('family', 'Todas las curvas'));
@@ -121,7 +121,8 @@
       if (this.hasBoth) tools.append(chip('numeric', 'Cálculo numérico (contornos)'));
       if (s.particular) tools.append(chip('particular', 'Solución particular'));
       this.sliders = {};
-      for (const c of s.consts) this.controls.append(this.makeSlider(c));
+      this.rows = {};
+      for (const c of s.consts) { const row = this.makeSlider(c); this.rows[c.name] = row; this.controls.append(row); }
       const actions = el('div', { class: 'actions' });
       if (s.particular && s.particular.values) actions.append(el('button', { type: 'button', onclick: () => this.setValues(s.particular.values) }, 'Ir a la particular'));
       actions.append(
@@ -142,6 +143,15 @@
       num.addEventListener('input', () => { range.value = num.value; set(+num.value); });
       this.sliders[c.name] = { range, num };
       return el('div', { class: 'row' }, el('label', { for: id, class: 'name' }, c.label || c.name), range, num);
+    }
+    /* sin curva elegida no hay constantes que mover: se ocultan sus controles (los parámetros fijos se quedan) */
+    syncControls() {
+      let visible = 0;
+      for (const c of this.spec.consts) {
+        const own = c.role === 'level' || c.sweep !== false, hide = own && !this.opts.selected;
+        this.rows[c.name].hidden = hide; if (!hide) visible++;
+      }
+      this.controls.hidden = visible === 0;
     }
     syncSliders() { for (const c of this.spec.consts) { const s = this.sliders[c.name]; s.range.value = this.env[c.name]; s.num.value = fmt(this.env[c.name]); } }
     setValues(vals) { Object.assign(this.env, vals); this.syncSliders(); this.draw(); }
