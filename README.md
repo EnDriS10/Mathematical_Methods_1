@@ -38,6 +38,9 @@ plot_orthogonal("y/x^n", "x^2+n*y^2", n=(0.5, 4, 2), a=(-3, 3, 1.5), C=(0.5, 12,
 plot_orthogonal_analytic("a*x^n", dict(x="sqrt(C)*cos(t)", y="sqrt(C/n)*sin(t)", var="t", t=(0, 6.2832)),
                          n=(0.5, 4, 2), a=(-3, 3, 1.5), C=(0.5, 12, 5.5))      # solo soluciones despejadas
 plot_problem("h1-01", field=True, selected=False)       # campo de direcciones sin la curva elegida
+plot_problem("h4-11-a", field=True, yp=1)                 # 2.º orden: arcos y''(x,y) de las soluciones con y'=1
+plot_problem("h4-11-a", phase=True)                       # 2.º orden: diagrama de fases (y, y')
+# órdenes superiores (h3-15, h3-16): no hay campo, field=True se ignora
 
 # solo tienes la EDO (sin resolver): integración numérica + campo de direcciones
 plot_ode(slope="sin(x-y)", highlight=(0, 1))

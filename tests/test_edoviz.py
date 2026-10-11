@@ -45,9 +45,63 @@ def test_numeric_method_still_works(id_):
 @pytest.mark.parametrize("id_", IDS)
 def test_every_problem_has_direction_field(id_):
     from edoviz.plotting import default_values, field_vectors
+    from edoviz.plotting import ode_order
     spec = catalog.get(id_)
     gx, gy, m = field_vectors(spec, default_values(spec))
-    assert len(gx) > 5 and len(gx) == len(m)
+    if ode_order(spec) >= 2:       # 2.º orden: diagrama de fases; órdenes superiores: nada
+        assert len(gx) == 0
+    else:
+        assert len(gx) > 5 and len(gx) == len(m)
+
+
+PHASE_IDS = [i for i in IDS if catalog.get(i)["kind"] == "explicit" and "y2" in (catalog.get(i).get("ode") or "")
+             and "y3" not in catalog.get(i).get("ode")]
+
+
+def test_phase_portrait_coverage():
+    from edoviz import has_phase_portrait, ode_order
+    assert len(PHASE_IDS) >= 60
+    assert all(has_phase_portrait(catalog.get(i)) for i in PHASE_IDS)
+    assert [i for i in IDS if ode_order(catalog.get(i)) >= 3] == ["h3-15", "h3-16"]
+
+
+@pytest.mark.parametrize("id_", PHASE_IDS)
+def test_phase_portrait_renders(id_):
+    from edoviz import plot_phase
+    fig, ax = plot_phase(catalog.get(id_))
+    assert len(ax.lines) > 3
+    x0, x1 = ax.get_xlim(); y0, y1 = ax.get_ylim()
+    assert x1 > x0 and y1 > y0
+    fig2, ax2 = plot_problem(id_, phase=True)
+    assert ax2.get_xlabel() == "y" and ax2.get_ylabel() == "y′"
+    fig3, ax3 = plot_problem(id_, field=True, yp=1.0)   # 2.º orden: campo de arcos en el plano (x, y)
+    assert ax3.get_xlabel() == "x" and len(ax3.collections) >= 1
+    plt.close(fig); plt.close(fig2); plt.close(fig3)
+
+
+@pytest.mark.parametrize("id_", PHASE_IDS)
+def test_arc_field(id_):
+    from edoviz.plotting import arc_field, default_values
+    spec = catalog.get(id_)
+    for p in (0.0, 1.5):
+        segs = arc_field(spec, default_values(spec), p)
+        assert len(segs) > 100
+
+
+def test_arc_field_matches_solution():
+    """En y''=y, un arco con y'=p en (x,y) tiene curvatura y: comprobación directa."""
+    from edoviz.plotting import arc_field, default_values
+    spec = catalog.get("h4-06")                      # y'' - y = 0
+    seg = arc_field(spec, default_values(spec), 0.0)[0]
+    c = len(seg) // 2
+    y_mid, t = seg[c, 1], seg[-1, 0] - seg[c, 0]
+    assert abs((seg[-1, 1] - y_mid) - y_mid * t * t / 2) < 1e-9
+
+
+def test_higher_order_has_no_field():
+    fig, ax = plot_problem("h3-15", field=True)
+    assert ax.get_xlabel() == "x" and not ax.collections
+    plt.close(fig)
 
 
 def test_selected_off_and_analytic_api():

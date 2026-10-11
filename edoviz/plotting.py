@@ -219,13 +219,54 @@ def curve_lines(spec, curve, env, res=3000):
     return lines
 
 
+def ode_order(spec) -> int:
+    """Orden de la EDO del spec (0 si no tiene ``ode``): mayor n tal que aparece ``yn`` (y1, y2, y3...)."""
+    ode = spec.get("ode") or ""
+    ns = [int(n) for n in re.findall(r"\by(\d)\b", ode)]
+    return max(ns) if ns else (1 if ode else 0)
+
+
+def has_phase_portrait(spec) -> bool:
+    """True si el spec admite diagrama de fases: curva explícita y(x) y EDO de 2.º orden."""
+    return spec.get("kind") == "explicit" and ode_order(spec) == 2
+
+
+def arc_field(spec, env, p=0.0, nx=24, ny=16):
+    """Campo de 2.º orden: lista de arcos ``y0 + p·t + y''·t²/2`` en cada punto (x, y) de la malla.
+
+    y'' se despeja de la ``ode`` (lineal en y2) con y' = p. Es el análogo del segmento de pendiente de los campos
+    de direcciones: muestra cómo se curvaría la solución que pasa por el punto con pendiente p.
+    """
+    x0, x1, y0, y1 = spec["window"]
+    GX, GY = np.meshgrid(x0 + (np.arange(nx) + .5) / nx * (x1 - x0), y0 + (np.arange(ny) + .5) / ny * (y1 - y0))
+    gx, gy = GX.ravel(), GY.ravel()
+    ode = spec["ode"]
+    with np.errstate(all="ignore"):
+        z = np.zeros_like(gx)
+        g0 = np.broadcast_to(np.asarray(_eval(spec, ode, env, x=gx, y=gy, y1=z + p, y2=z), float), gx.shape)
+        g1 = np.broadcast_to(np.asarray(_eval(spec, ode, env, x=gx, y=gy, y1=z + p, y2=z + 1.0), float), gx.shape)
+        a = -g0 / (g1 - g0)
+    ppx, ppy = 1 / (x1 - x0), 1 / (y1 - y0)                # píxeles relativos por unidad
+    length = 0.8 * min(1 / nx, 1 / ny)
+    t = length / np.hypot(ppx, p * ppy) / 2
+    cap = 1.2 * length / (ppy * t * t / 2)                  # limita la curvatura dibujada
+    a = np.clip(a, -cap, cap)
+    u = np.linspace(-1, 1, 13)
+    segs = []
+    for xi, yi, ai in zip(gx, gy, a):
+        if np.isfinite(ai):
+            segs.append(np.column_stack([xi + t * u, yi + p * t * u + ai * (t * u) ** 2 / 2]))
+    return segs
+
+
 def field_vectors(spec, env, nx=25, ny=19):
     """Pendientes (x, y, m) del campo de direcciones, para cualquier problema.
 
     * si hay ``slope`` (y' = f(x,y)): se evalúa en una malla;
     * si no, pero la ``ode`` es de primer orden (implícita en y1: Clairaut, Lagrange...): se resuelve y1 en cada
       punto (todas las raíces reales: por un punto pueden pasar varias curvas);
-    * si la EDO es de orden superior (y2, y3): no hay campo único; se dibujan las tangentes de la curva elegida.
+    * si la EDO es de 2.º orden o superior no hay campo de direcciones en el plano (x, y): devuelve vacío
+      (en 2.º orden se usa el diagrama de fases, ``plot_phase``; en órdenes superiores no se ofrece nada).
     """
     x0, x1, y0, y1 = spec["window"]
     GX, GY = np.meshgrid(np.linspace(x0, x1, nx), np.linspace(y0, y1, ny))
@@ -257,17 +298,6 @@ def field_vectors(spec, env, nx=25, ny=19):
             root = (lo + hi) / 2
             good = np.abs(F1(root)) < 0.01 * np.minimum(np.abs(f[i, j]), np.abs(f[i, j + 1]))
             return xs_[good], ys_[good], np.tan(root[good])
-        if spec["kind"] == "explicit":     # tangentes de la curva elegida (diferencias centrales)
-            xs = np.linspace(x0, x1, 2 * nx)
-            exprs = spec["y"] if isinstance(spec["y"], list) else [spec["y"]]
-            X, Y, M = [], [], []
-            h = (x1 - x0) * 1e-6
-            for e in exprs:
-                yy = np.asarray(_eval(spec, e, env, x=xs), float)
-                d = (np.asarray(_eval(spec, e, env, x=xs + h), float) - np.asarray(_eval(spec, e, env, x=xs - h), float)) / (2 * h)
-                ok = np.isfinite(yy) & np.isfinite(d) & (yy >= y0) & (yy <= y1)
-                X += list(xs[ok]); Y += list(yy[ok]); M += list(d[ok])
-            return np.array(X), np.array(Y), np.array(M)
     return np.zeros(0), np.zeros(0), np.zeros(0)
 
 
@@ -369,12 +399,22 @@ def _intersections(a, b, limit=400):
 def plot_spec(spec: Mapping, values: Mapping | None = None, ax=None, theme: str = "light", family: bool = True,
               extras: bool = True, particular: bool = True, field: bool = False, title: bool | str = True,
               legend: bool = True, res: int = 500, figsize=(6.2, 4.6), show: bool = False,
-              selected: bool = True, method: str = "analytic"):
+              selected: bool = True, method: str = "analytic", phase: bool = False, yp: float = 0.0):
     """Dibuja un spec del catálogo (o creado con ``plot_*``). Devuelve ``(fig, ax)``.
 
     ``method="analytic"`` (por defecto) usa la solución despejada si el spec la tiene; ``"numeric"`` dibuja
     las curvas de nivel de F(x,y). ``selected=False`` oculta la curva elegida (p. ej. solo campo de direcciones).
+
+    EDO de 2.º orden: ``field=True`` dibuja el equivalente del campo de direcciones, un arco en cada punto (x, y) con la
+    curvatura y'' de la solución que pasa por él con pendiente ``yp`` (y' = yp); ``phase=True`` dibuja en su lugar el
+    diagrama de fases (y, y'). En órdenes superiores no hay campo.
     """
+    if phase and has_phase_portrait(spec):
+        return plot_phase(spec, values, ax=ax, theme=theme, family=family, particular=particular, title=title,
+                          legend=legend, figsize=figsize, show=show, selected=selected)
+    arcs = field and has_phase_portrait(spec)    # 2.º orden: campo de arcos (y' = yp) en lugar de pendientes
+    if field and ode_order(spec) >= 2:
+        field = False                            # (orden ≥3: no hay campo que dibujar)
     th = THEMES[theme]
     env = _env(spec, values)
     created = ax is None
@@ -392,6 +432,11 @@ def plot_spec(spec: Mapping, values: Mapping | None = None, ax=None, theme: str 
 
     kind = spec["kind"]
     # ---- campo de direcciones
+    if arcs:
+        from matplotlib.collections import LineCollection
+        segs = arc_field(spec, env, yp)
+        ax.add_collection(LineCollection(segs, colors=th["field"], linewidths=1.2, alpha=.8, zorder=1))
+        mk(f"campo: arcos de las soluciones con y′={yp:g} (curvatura y″)", color=th["field"], lw=1.2)
     if field:
         gx, gy, m = field_vectors(spec, env)
         groups = [(gx, gy, m, th["field"])]
@@ -569,13 +614,167 @@ def _consts(consts: Mapping, sweep=True):
     return [_const(k, v, sweep=sweep) for k, v in consts.items()]
 
 
+def _phase_curve(spec, env, n=3000):
+    """Trayectoria (y(x), y'(x)) de una solución explícita; y' por diferencias centrales. Lista de polilíneas."""
+    x0, x1 = spec["window"][:2]
+    h = (x1 - x0) * 1e-6
+    out = []
+    exprs = spec["y"] if isinstance(spec["y"], list) else [spec["y"]]
+    for e in exprs:
+        xs, ys = _explicit_samples(spec, e, spec.get("valid"), env, np.linspace(x0, x1, n))
+        with np.errstate(all="ignore"):
+            f = lambda xv: np.broadcast_to(np.asarray(_eval(spec, e, env, x=xv), float), np.shape(xv))
+            v = (f(xs + h) - f(xs - h)) / (2 * h)
+        out.append((xs, ys, v))
+    return out
+
+
+def phase_window(spec, env=None):
+    """Ventana (y_min, y_max, y'_min, y'_max): y la del enunciado; y' por percentiles de las trayectorias de la familia."""
+    y0, y1 = spec["window"][2:]
+    env0 = _env(spec, None) if env is None else env
+    envs = [env0]
+    for c in spec["consts"]:
+        if c.get("sweep", True) and c.get("role") != "level":
+            envs += [{**env0, c["name"]: float(v)} for v in sweep_values(c)]
+    part = (spec.get("particular") or {}).get("values")
+    if part:
+        envs.append({**env0, **part})
+    vs = []
+    for e in envs:
+        for _, ys, v in _phase_curve(spec, e, 600):
+            ok = np.isfinite(ys) & np.isfinite(v) & (ys >= y0) & (ys <= y1)
+            vs.append(v[ok])
+    vs = np.concatenate(vs) if vs else np.zeros(0)
+    if len(vs) > 10:
+        lo, hi = np.percentile(vs, [4, 96])
+    else:
+        lo, hi = -5.0, 5.0
+    pad = (hi - lo) * .12 or 1.0
+    return y0, y1, lo - pad, hi + pad
+
+
+def plot_phase(spec: Mapping, values: Mapping | None = None, ax=None, theme: str = "light", family: bool = True,
+               particular: bool = True, title: bool | str = True, legend: bool = True, figsize=(6.2, 4.6),
+               show: bool = False, selected: bool = True):
+    """Diagrama de fases (y, y') de una EDO de 2.º orden con solución explícita y(x; C1, C2).
+
+    Cada trayectoria es la curva (y(x), y'(x)); las flechas indican el sentido en que crece x. Si la EDO no depende
+    de x (autónoma) se añade el campo de vectores (y', y''). Devuelve ``(fig, ax)``.
+    """
+    if not has_phase_portrait(spec):
+        raise ValueError("el diagrama de fases solo está definido para EDO de 2.º orden con solución explícita")
+    th = THEMES[theme]
+    env = _env(spec, values)
+    created = ax is None
+    if created:
+        fig, ax = plt.subplots(figsize=figsize)
+    else:
+        fig = ax.figure
+    fig.patch.set_facecolor(th["bg"]); ax.set_facecolor(th["bg"])
+    wy0, wy1, wv0, wv1 = phase_window(spec)
+    ax.set_xlim(wy0, wy1); ax.set_ylim(wv0, wv1)
+    handles = {}
+
+    def mk(label, **kw):
+        if label not in handles:
+            handles[label] = ax.plot([], [], label=label, **kw)[0]
+
+    def arrow(xs, vs, color, lw, z):
+        """Punta de flecha en el punto central de la trayectoria visible."""
+        ok = np.isfinite(xs) & np.isfinite(vs) & (xs >= wy0) & (xs <= wy1) & (vs >= wv0) & (vs <= wv1)
+        idx = np.nonzero(ok)[0]
+        idx = idx[(idx > 0) & (idx < len(xs) - 1)]
+        if len(idx) < 6:
+            return
+        i = idx[len(idx) // 2]
+        ax.annotate("", xy=(xs[min(i + 2, len(xs) - 1)], vs[min(i + 2, len(xs) - 1)]), xytext=(xs[i - 1], vs[i - 1]),
+                    arrowprops=dict(arrowstyle="-|>", color=color, lw=lw, mutation_scale=9 + 3 * lw), zorder=z)
+
+    def draw(e_, color, lw, alpha, z, halo=False, arrows=True):
+        for xs, ys, v in _phase_curve(spec, e_):
+            for ln in _split(ys, v, (wy0, wy1, wv0, wv1)):
+                if halo:
+                    ax.plot(ln[:, 0], ln[:, 1], color=th["bg"], lw=lw + 3.2, zorder=z - .1)
+                ax.plot(ln[:, 0], ln[:, 1], color=color, lw=lw, alpha=alpha, zorder=z)
+            if arrows:
+                arrow(ys, v, color, lw, z + .05)
+
+    # campo de vectores (y', y'') solo si la EDO no depende de x
+    ode = spec.get("ode") or ""
+    if not re.search(r"\bx\b", ode):
+        nx, ny = 22, 15
+        GY, GV = np.meshgrid(np.linspace(wy0, wy1, nx + 2)[1:-1], np.linspace(wv0, wv1, ny + 2)[1:-1])
+        gy, gv = GY.ravel(), GV.ravel()
+        with np.errstate(all="ignore"):
+            g0 = np.broadcast_to(np.asarray(_eval(spec, ode, env, x=0.0 * gy, y=gy, y1=gv, y2=0.0 * gy), float), gy.shape)
+            g1 = np.broadcast_to(np.asarray(_eval(spec, ode, env, x=0.0 * gy, y=gy, y1=gv, y2=1.0 + 0 * gy), float), gy.shape)
+            a = -g0 / (g1 - g0)
+            u, w = gv / (wy1 - wy0), a / (wv1 - wv0)           # dirección en fracciones de ventana
+            nrm = np.hypot(u, w)
+            ok = np.isfinite(nrm) & (nrm > 1e-12)
+        L = .4
+        ax.quiver(gy[ok], gv[ok], (u / nrm * L / nx * (wy1 - wy0))[ok], (w / nrm * L / ny * (wv1 - wv0))[ok],
+                  color=th["field"], alpha=.7, angles="xy", scale_units="xy", scale=1, pivot="mid", width=.003,
+                  headwidth=4, headlength=4.5, headaxislength=4, zorder=1)
+
+    if family:
+        for c in spec["consts"]:
+            if not c.get("sweep", True) or c.get("role") == "level":
+                continue
+            for v in sweep_values(c):
+                draw({**env, c["name"]: float(v)}, th["family"], .9, .42, 3)
+        mk("trayectorias de la familia", color=th["family"], lw=.9, alpha=.6)
+    if selected:
+        draw(env, th["family"], 2.8, 1, 5, halo=True)
+        shown = ", ".join(f"{c['name']}={env[c['name']]:g}" for c in spec["consts"]
+                          if c.get("sweep", True) and c.get("role") != "level")
+        mk(f"trayectoria elegida ({shown})", color=th["family"], lw=2.8)
+    part = spec.get("particular") if particular else None
+    if part and "values" in part:
+        e2 = {**env, **part["values"]}
+        draw(e2, th["particular"], 3.2, 1, 7, halo=True)
+        if part.get("point"):
+            x_p = float(_eval(spec, part["point"][0], e2, x=0.0))
+            xs_ = np.array([x_p])
+            e_ = spec["y"][0] if isinstance(spec["y"], list) else spec["y"]
+            h = (spec["window"][1] - spec["window"][0]) * 1e-6
+            f = lambda xv: float(np.asarray(_eval(spec, e_, e2, x=xv), float))
+            ax.scatter([f(x_p)], [(f(x_p + h) - f(x_p - h)) / (2 * h)], s=70, color=th["particular"], edgecolor=th["bg"],
+                       linewidth=1.5, zorder=10)
+        mk("solución particular: " + part.get("label", ""), color=th["particular"], lw=3.2)
+    ax.grid(True, color=th["grid"], lw=.7, zorder=0)
+    ax.axhline(0, color=th["axis"], lw=.9, zorder=2); ax.axvline(0, color=th["axis"], lw=.9, zorder=2)
+    for sp in ax.spines.values():
+        sp.set_color(th["axis"])
+    ax.tick_params(colors=th["muted"], labelsize=8)
+    ax.set_xlabel("y", color=th["muted"]); ax.set_ylabel("y′", color=th["muted"])
+    if title:
+        t = title if isinstance(title, str) else spec.get("tex")
+        if t:
+            try:
+                ax.set_title((f"${_tex(t)}$" if not isinstance(title, str) else t) + "  —  diagrama de fases", color=th["fg"], fontsize=10)
+                fig.canvas.draw()
+            except Exception:
+                ax.set_title(spec.get("id", "") + " — diagrama de fases", color=th["fg"], fontsize=10)
+    if legend and handles:
+        leg = ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.12), ncol=1, fontsize=7.5, frameon=False)
+        for t_ in leg.get_texts():
+            t_.set_color(th["muted"])
+    if created:
+        fig.tight_layout()
+    if show:
+        plt.show()
+    return fig, ax
+
+
 def make_spec(kind: str, window, consts: Iterable[dict], tex: str = "", **kw) -> dict:
     spec = dict(id=kw.pop("id", "custom"), sheet=0, num=0, kind=kind, tex=tex, window=list(window), consts=list(consts))
     spec.update(kw)
     return spec
 
 
-_PLOT_OPTS = ("selected", "method", "values", "ax", "theme", "family", "field", "title", "legend", "res", "figsize", "show", "particular_on", "extras_on")
+_PLOT_OPTS = ("phase", "yp", "selected", "method", "values", "ax", "theme", "family", "field", "title", "legend", "res", "figsize", "show", "particular_on", "extras_on")
 
 
 def _split_kw(kw: dict):

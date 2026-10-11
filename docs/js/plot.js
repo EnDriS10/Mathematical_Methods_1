@@ -34,8 +34,8 @@
       this.cn = spec.consts.map((c) => c.name);
       this.levelNames = spec.consts.filter((c) => c.role === 'level').map((c) => c.name);
       this.defs = spec.defs || [];
-      this.env = {}; spec.consts.forEach((c) => (this.env[c.name] = c.value));
-      this.opts = { family: true, selected: true, numeric: false, field: false, extras: true, particular: true };
+      this.env = {}; spec.consts.forEach((c) => (this.env[c.name] = c.value)); this.env.__p = 0;
+      this.opts = { family: true, selected: true, numeric: false, field: false, phase: false, extras: true, particular: true };
       this.view = null;
       this.cache = {};
       this.compileAll();
@@ -86,9 +86,17 @@
       }
       this.extras = (s.extras || []).map((c) => this.compileCurve(c, 'explicit'));
       this.slope = s.slope ? this.fn(s.slope, ['x', 'y']) : null;
-      /* campo de direcciones: slope | raíces de la ode en y1 | tangentes de la curva elegida */
-      this.fieldMode = this.slope ? 'slope' : (s.ode && !/\by[23]\b/.test(s.ode)) ? 'roots' : (s.kind === 'explicit' ? 'tangents' : null);
-      if (this.fieldMode === 'roots') this.odeF = this.fn(s.ode, ['x', 'y', 'y1']);
+      /* orden de la EDO → qué se puede dibujar: 1.º slope | raíces de la ode en y1; 2.º diagrama de fases (y, y'); ≥3.º nada */
+      const ode = s.ode || '';
+      this.order = Math.max(ode ? 1 : 0, ...(ode.match(/\by(\d)\b/g) || []).map((t) => +t.slice(1)));
+      this.fieldMode = this.slope ? 'slope' : this.order >= 3 ? null : (this.order === 2 && s.kind === 'explicit') ? 'phase' : (ode ? 'roots' : null);
+      if (this.fieldMode === 'roots') this.odeF = this.fn(ode, ['x', 'y', 'y1']);
+      /* 2.º orden: y'' se despeja de la ode (lineal en y2) → arcos del campo (x,y) para y' = p y campo de vectores del plano de fases (si no depende de x) */
+      if (this.fieldMode === 'phase') {
+        this.odeA = this.fn(ode, ['x', 'y', 'y1', 'y2']);
+        this.autonomous = !/\bx\b/.test(ode);
+      }
+      this.phase = false;
       if (s.particular) {
         const p = s.particular;
         this.part = { label: p.label, values: p.values || null, curve: p.curve ? this.compileCurve(p.curve, 'explicit') : null,
@@ -111,12 +119,13 @@
       const chip = (key, text) => {
         const id = 'c' + Math.random().toString(36).slice(2, 8);
         const input = el('input', { type: 'checkbox', id, checked: this.opts[key] });
-        input.addEventListener('change', () => { this.opts[key] = input.checked; if (key === 'selected') this.syncControls(); this.draw(); });
+        input.addEventListener('change', () => { this.opts[key] = input.checked; if (key === 'selected') this.syncControls(); if (key === 'field' || key === 'phase') this.syncPhase(); this.draw(); });
         return el('label', { class: 'chip', for: id }, input, el('span', {}, text));
       };
       tools.append(chip('family', 'Todas las curvas'));
       tools.append(chip('selected', 'Curva elegida'));
-      if (this.fieldMode) { this.opts.field = false; tools.append(chip('field', 'Campo de direcciones')); }
+      if (this.fieldMode) { this.opts.field = false; tools.append(chip('field', this.fieldMode === 'phase' ? 'Campo de direcciones (y′ fija)' : 'Campo de direcciones')); }
+      if (this.fieldMode === 'phase') tools.append(chip('phase', 'Diagrama de fases'));
       if ((s.extras || []).length) tools.append(chip('extras', 'Soluciones singulares'));
       if (this.hasBoth) tools.append(chip('numeric', 'Cálculo numérico (contornos)'));
       if (s.particular) tools.append(chip('particular', 'Solución particular'));
@@ -130,7 +139,11 @@
         el('button', { type: 'button', onclick: () => this.download() }, 'Descargar PNG'));
       const hint = this.canPick() ? el('p', { class: 'hint' }, 'Toca o haz clic en el gráfico para elegir la curva que pasa por ese punto. Rueda para ampliar, arrastra para mover.')
                                  : el('p', { class: 'hint' }, 'Rueda para ampliar, arrastra para mover.');
-      root.append(this.stage, this.legend, tools, this.controls, actions, hint);
+      this.hintEl = hint; this.hint0 = hint.textContent;
+      /* deslizador de la pendiente y' = p del campo de 2.º orden */
+      this.pRow = null;
+      if (this.fieldMode === 'phase') { this.pRow = this.makeSlider({ name: '__p', min: -5, max: 5, value: 0, step: 0.1, label: 'y′ = p' }); this.pRow.classList.add('prow'); this.pRow.hidden = true; }
+      root.append(this.stage, this.legend, tools, ...(this.pRow ? [this.pRow] : []), this.controls, actions, hint);
       this.bindPointer();
       this.resize();
     }
@@ -168,7 +181,7 @@
       this.cache = {};
       if (this.view) this.fitAspect();
     }
-    resetView() { const w = this.spec.window; this.view = { x0: w[0], x1: w[1], y0: w[2], y1: w[3] }; this.fitAspect(); this.cache = {}; }
+    resetView() { const w = this.phase ? this.phaseWindow() : this.spec.window; this.view = { x0: w[0], x1: w[1], y0: w[2], y1: w[3] }; this.fitAspect(); this.cache = {}; }
     fitAspect() {
       if (this.spec.aspect !== 'equal') return;
       const v = this.view, W = this.cssW, Hh = this.cssH;
@@ -281,8 +294,16 @@
       ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
       this.axes(ctx, th);
       ctx.save(); ctx.beginPath(); ctx.rect(0, 0, this.cssW, this.cssH); ctx.clip();
+      if (this.phase) {
+        try { this.drawPhase(ctx, th, leg); } catch (err) { console.error(this.spec.id, err); }
+        ctx.restore();
+        ctx.font = '12px ui-sans-serif, system-ui, sans-serif'; ctx.fillStyle = th.text; ctx.textAlign = 'right'; ctx.textBaseline = 'top';
+        ctx.fillText('horizontal: y  ·  vertical: y′', this.cssW - 8, 6);
+        this.renderLegend(leg);
+        return;
+      }
       try {
-        if (this.opts.field && this.fieldMode) this.drawField(ctx, th);
+        if (this.opts.field && this.fieldMode === 'phase') this.drawArcField(ctx, th, leg); else if (this.opts.field && this.fieldMode) this.drawField(ctx, th);
         const sel = this.opts.selected;
         if (s.kind === 'level') {
           const fam = this.fams[0], lc = fam.lc, r = this.levelFamily(fam, env);
@@ -341,6 +362,134 @@
       }
       leg.push([th.par, 'solución particular: ' + (p.label || ''), 3.4]);
     }
+
+    /* ------------------------------------------------------------ diagrama de fases (EDO de 2.º orden): plano (y, y') */
+    syncPhase() {
+      if (this.fieldMode !== 'phase') return;
+      const on = !!this.opts.phase;
+      if (this.pRow) this.pRow.hidden = !(this.opts.field && !on);
+      if (on !== this.phase) {
+        this.phase = on; this.cache = {}; this.resetView();
+        this.hintEl.textContent = on ? 'Plano de fases: horizontal y, vertical y′. Las flechas marcan el sentido en que crece x. Rueda para ampliar, arrastra para mover.' : this.hint0;
+      }
+    }
+    deriv(f, x, K) { const h = (this.spec.window[1] - this.spec.window[0]) * 1e-6; return (f(x + h, K) - f(x - h, K)) / (2 * h); }
+    /* ventana (y, y') que encierra las trayectorias de la familia: y del enunciado, y' por percentiles */
+    phaseWindow() {
+      if (this._pw) return this._pw;
+      const s = this.spec, [x0, x1, y0, y1] = s.window, env0 = {}; s.consts.forEach((c) => (env0[c.name] = c.value));
+      const envs = [env0];
+      for (const c of s.consts) { if (c.sweep === false || c.role === 'level') continue; for (const val of E.sweepValues(c)) envs.push(Object.assign({}, env0, { [c.name]: val })); }
+      if (this.part && this.part.values) envs.push(Object.assign({}, env0, this.part.values));
+      const vs = [], N = 400;
+      for (const e of envs) {
+        const K = this.K(e);
+        for (const f of this.main.ys) for (let i = 0; i < N; i++) {
+          const x = x0 + (x1 - x0) * i / (N - 1);
+          if (this.main.valid && !(this.main.valid(x, K) >= 0)) continue;
+          const y = f(x, K), v = this.deriv(f, x, K);
+          if (Number.isFinite(y) && Number.isFinite(v) && y >= y0 && y <= y1) vs.push(v);
+        }
+      }
+      vs.sort((a, b) => a - b);
+      let lo = -5, hi = 5;
+      if (vs.length > 10) { lo = vs[Math.floor(vs.length * 0.04)]; hi = vs[Math.min(vs.length - 1, Math.ceil(vs.length * 0.96))]; }
+      const pad = (hi - lo) * 0.12 || 1;
+      return (this._pw = [y0, y1, lo - pad, hi + pad]);
+    }
+    phaseLines(env) {
+      const K = this.K(env), [x0, x1] = this.spec.window, n = Math.round(this.cssW * 1.6), X0 = new Float64Array(n), out = [];
+      for (let i = 0; i < n; i++) X0[i] = x0 + (x1 - x0) * i / (n - 1);
+      for (const f of this.main.ys) {
+        const r = E.sampleExplicit(f, this.main.valid, K, X0), V = new Float64Array(r.X.length);
+        for (let i = 0; i < V.length; i++) V[i] = this.deriv(f, r.X[i], K);
+        out.push(...E.splitCurve(r.Y, V, this.view));
+      }
+      return out;
+    }
+    /* punta de flecha en cada trazo, en el sentido en que crece x (los trazos se generan con x creciente) */
+    arrows(ctx, lines, color, size, alpha) {
+      ctx.fillStyle = color; ctx.globalAlpha = alpha == null ? 1 : alpha;
+      for (const ln of lines) {
+        const idx = [];
+        for (let i = 1; i < ln.length / 2 - 1; i++) { const px = this.X(ln[2 * i]), py = this.Y(ln[2 * i + 1]); if (px > 4 && px < this.cssW - 4 && py > 4 && py < this.cssH - 4) idx.push(i); }
+        if (idx.length < 6) continue;
+        const i = idx[idx.length >> 1];
+        const ax = this.X(ln[2 * i - 2]), ay = this.Y(ln[2 * i - 1]), bx = this.X(ln[2 * i + 2]), by = this.Y(ln[2 * i + 3]);
+        const d = Math.hypot(bx - ax, by - ay); if (!(d > 1e-9)) continue;
+        const ux = (bx - ax) / d, uy = (by - ay) / d, cx = this.X(ln[2 * i]), cy = this.Y(ln[2 * i + 1]);
+        ctx.beginPath();
+        ctx.moveTo(cx + ux * size, cy + uy * size);
+        ctx.lineTo(cx - ux * size * .6 - uy * size * .6, cy - uy * size * .6 + ux * size * .6);
+        ctx.lineTo(cx - ux * size * .6 + uy * size * .6, cy - uy * size * .6 - ux * size * .6);
+        ctx.closePath(); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+    drawPhase(ctx, th, leg) {
+      const s = this.spec, env = this.env, sel = this.opts.selected;
+      if (this.odeA && this.autonomous) this.drawPhaseField(ctx, th);
+      if (this.opts.family) {
+        for (const c of s.consts) {
+          if (c.sweep === false || c.role === 'level') continue;
+          for (const val of E.sweepValues(c)) {
+            const ls = this.phaseLines(Object.assign({}, env, { [c.name]: val }));
+            this.stroke(ctx, ls, th.fam, 1, null, 0.4); this.arrows(ctx, ls, th.fam, 4.5, 0.55);
+          }
+        }
+        leg.push([th.fam, 'trayectorias de la familia (constantes variables)', 1, .6]);
+      }
+      if (sel) {
+        const ls = this.phaseLines(env);
+        this.strong(ctx, ls, th.fam, 3, th); this.arrows(ctx, ls, th.fam, 8);
+        const shown = s.consts.filter((c) => c.sweep !== false && c.role !== 'level').map((c) => c.name + ' = ' + fmt(env[c.name])).join(', ');
+        leg.push([th.fam, 'trayectoria elegida (' + shown + ')', 3]);
+      }
+      if (this.opts.particular && this.part && this.part.values) {
+        const e2 = Object.assign({}, env, this.part.values), ls = this.phaseLines(e2);
+        this.strong(ctx, ls, th.par, 3.4, th); this.arrows(ctx, ls, th.par, 8);
+        if (this.part.px) {
+          const K = this.K(e2), x = this.part.px(0, K), f = this.main.ys[0], y = f(x, K), v = this.deriv(f, x, K);
+          if (Number.isFinite(y) && Number.isFinite(v)) { ctx.beginPath(); ctx.arc(this.X(y), this.Y(v), 5.5, 0, 6.2832); ctx.fillStyle = th.par; ctx.fill(); ctx.strokeStyle = th.bg; ctx.lineWidth = 2; ctx.stroke(); }
+        }
+        leg.push([th.par, 'solución particular: ' + (this.part.label || ''), 3.4]);
+      }
+    }
+    /* y'' en (x, y) para y' = w, despejada de la ode (lineal en y2) */
+    accel(x, y, w, K) { const g = this.odeA, g0 = g(x, y, w, 0, K); return -g0 / (g(x, y, w, 1, K) - g0); }
+    /* equivalente del campo de direcciones en 2.º orden: en cada punto, el arco y = y0 + p·t + y''·t²/2 de la solución que pasa con y' = p */
+    drawArcField(ctx, th, leg) {
+      const v = this.view, K = this.K(), p = this.env.__p, nx = 24, ny = 16, len = Math.min(this.cssW / nx, this.cssH / ny) * 0.8;
+      const ppx = this.cssW / (v.x1 - v.x0), ppy = this.cssH / (v.y1 - v.y0), t = len / Math.hypot(ppx, p * ppy) / 2;
+      ctx.strokeStyle = th.field; ctx.lineWidth = 1.3; ctx.globalAlpha = .85; ctx.beginPath();
+      for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+        const x = v.x0 + (i + .5) / nx * (v.x1 - v.x0), y = v.y0 + (j + .5) / ny * (v.y1 - v.y0), a = this.accel(x, y, p, K);
+        if (!Number.isFinite(a)) continue;
+        const cap = 1.2 * len / (ppy * t * t / 2 || 1), aa = Math.max(-cap, Math.min(cap, a));   // limita la curvatura dibujada
+        for (let k = -6; k <= 6; k++) {
+          const u = t * k / 6, px = this.X(x + u), py = this.Y(y + p * u + aa * u * u / 2);
+          if (k === -6) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+      }
+      ctx.stroke(); ctx.globalAlpha = 1;
+      leg.push([th.field, 'campo: arcos de las soluciones con y′ = ' + fmt(p) + ' (curvatura y″ en cada punto)', 1.3]);
+    }
+    /* campo de vectores (y', y'') del plano de fases; solo si la EDO no depende de x */
+    drawPhaseField(ctx, th) {
+      const v = this.view, K = this.K(), g = this.odeA, nx = 22, ny = 15, len = Math.min(this.cssW / nx, this.cssH / ny) * 0.4;
+      const ppx = this.cssW / (v.x1 - v.x0), ppy = this.cssH / (v.y1 - v.y0);
+      ctx.strokeStyle = th.field; ctx.lineWidth = 1.2; ctx.globalAlpha = .75; ctx.beginPath();
+      for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+        const y = v.x0 + (i + .5) / nx * (v.x1 - v.x0), w = v.y0 + (j + .5) / ny * (v.y1 - v.y0);
+        const g0 = g(0, y, w, 0, K), a = -g0 / (g(0, y, w, 1, K) - g0);
+        if (!Number.isFinite(a)) continue;
+        const dx = w * ppx, dy = -a * ppy, n = Math.hypot(dx, dy); if (!(n > 1e-9)) continue;
+        const ux = dx / n, uy = dy / n, px = this.X(y), py = this.Y(w), hx = px + ux * len, hy = py + uy * len;
+        ctx.moveTo(px - ux * len, py - uy * len); ctx.lineTo(hx, hy);
+        ctx.moveTo(hx - ux * 4 - uy * 2.6, hy - uy * 4 + ux * 2.6); ctx.lineTo(hx, hy); ctx.lineTo(hx - ux * 4 + uy * 2.6, hy - uy * 4 - ux * 2.6);
+      }
+      ctx.stroke(); ctx.globalAlpha = 1;
+    }
     /* pendientes del campo: [[x, y, m], ...] */
     fieldPoints() {
       const v = this.view, K = this.K(), nx = 26, ny = 18, pts = [];
@@ -364,15 +513,6 @@
               if (Math.abs(g(x, y, r)) < 0.01 * Math.min(Math.abs(fp), Math.abs(fn))) pts.push([x, y, Math.tan(r)]);
             }
             fp = fn;
-          }
-        }
-      } else if (this.fieldMode === 'tangents') {
-        const n = 2 * nx, h = (v.x1 - v.x0) * 1e-6, e = this.env;
-        for (const f of this.main.ys) for (let i = 0; i < n; i++) {
-          const x = v.x0 + (i + .5) / n * (v.x1 - v.x0), y = f(x, K);
-          if (!this.main.valid || this.main.valid(x, K) >= 0) {
-            const d = (f(x + h, K) - f(x - h, K)) / (2 * h);
-            if (Number.isFinite(y) && Number.isFinite(d) && y >= v.y0 && y <= v.y1) pts.push([x, y, d]);
           }
         }
       }
@@ -416,6 +556,7 @@
       return c.length === 1 ? c[0] : null;
     }
     pick(x, y) {
+      if (this.phase) return;
       const s = this.spec, K = this.K();
       const clamp = (c, v) => Math.min(c.max, Math.max(c.min, v));
       if (s.kind === 'level') {
@@ -452,7 +593,7 @@
       cv.addEventListener('pointerdown', (e) => { cv.setPointerCapture(e.pointerId); const [px, py] = pos(e); drag = { px, py, v: Object.assign({}, this.view), moved: false }; });
       cv.addEventListener('pointermove', (e) => {
         const [px, py] = pos(e);
-        this.readout.textContent = 'x = ' + fmt(this.ux(px)) + '   y = ' + fmt(this.uy(py)); this.readout.style.opacity = 1;
+        this.readout.textContent = this.phase ? 'y = ' + fmt(this.ux(px)) + '   y′ = ' + fmt(this.uy(py)) : 'x = ' + fmt(this.ux(px)) + '   y = ' + fmt(this.uy(py)); this.readout.style.opacity = 1;
         if (!drag) return;
         const dx = px - drag.px, dy = py - drag.py;
         if (Math.hypot(dx, dy) > 4) drag.moved = true;
