@@ -26,6 +26,7 @@ import numpy as np
 from contourpy import contour_generator
 
 from . import catalog
+from . import expr as _expr
 from .expr import compile_expr, free_names
 
 # --------------------------------------------------------------------------- estilo
@@ -128,6 +129,7 @@ def _defs_env(spec, env, var_env):
 def _eval(spec, text, env, **var_env):
     """Evalúa ``text`` con constantes (env), variables (x, y, t...) y defs."""
     names = tuple(list(var_env) + list(env) + [d[0] for d in spec.get("defs", [])])
+    _expr.CTX["series"], _expr.CTX["env"] = spec.get("series"), env      # para S(i, x, N)
     full = _defs_env(spec, env, var_env)
     return _compiled(str(text), names)(**full)
 

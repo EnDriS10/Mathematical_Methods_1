@@ -59,7 +59,7 @@
     }
 
     /* ------------------------------------------------------------ compilación */
-    fn(text, vars) { return E.compile(String(text), vars, this.cn, this.defs); }
+    fn(text, vars) { return E.compile(String(text), vars, this.cn, this.defs, this.spec.series); }
     compileCurve(c, fallbackKind) {
       const kind = c.kind || fallbackKind, o = { kind, label: c.label };
       if (kind === 'explicit') { o.ys = (Array.isArray(c.y) ? c.y : [c.y]).map((t) => this.fn(t, ['x'])); if (c.valid) o.valid = this.fn(c.valid, ['x']); }
@@ -142,7 +142,7 @@
       this.hintEl = hint; this.hint0 = hint.textContent;
       /* deslizador de la pendiente y' = p del campo de 2.º orden */
       this.pRow = null;
-      if (this.fieldMode === 'phase') { this.pRow = this.makeSlider({ name: '__p', min: -5, max: 5, value: 0, step: 0.1, label: 'y′ = p' }); this.pRow.classList.add('prow'); this.pRow.hidden = true; }
+      if (this.fieldMode === 'phase') { this.pRow = this.makeSlider({ name: '__p', min: -5, max: 5, value: 0, step: 0.1, label: 'y′ fijada' }); this.pRow.classList.add('prow'); this.pRow.hidden = true; }
       root.append(this.stage, this.legend, tools, ...(this.pRow ? [this.pRow] : []), this.controls, actions, hint);
       this.bindPointer();
       this.resize();

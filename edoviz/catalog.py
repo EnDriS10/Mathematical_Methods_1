@@ -512,6 +512,67 @@ for _l, _yp, _f, _w, _t in [
              particular=_yp0())
 
 
+# =====================================================================  HOJA 5 · series de potencias
+# Cada serie se define por su recurrencia (``series=[{init, rec}]``): el coeficiente a_m sale de ``rec`` en función de
+# m, a1..a4 (= a_{m-1}..a_{m-4}) y las constantes del spec (p, s...). ``S(i, x, N)`` = suma de los N primeros términos
+# de la serie i. El deslizador N (por defecto alto) elige cuántos términos de la serie se dibujan.
+def _ser(init, rec, n=130):
+    return dict(init=list(init), rec=rec, n=n)
+
+
+def _N(value=80, hi=120):
+    return K("N", 1, hi, value, integer=True, sweep=False, step=1, label="nº de términos")
+
+
+def _a(lo=-3, hi=3, v1=1, v2=0, n=7):
+    return [K("C1", lo, hi, v1, n=n, label="a₀"), K("C2", lo, hi, v2, n=n, label="a₁")]
+
+
+_BASIS = "C1*S(0,x,N)+C2*S(1,x,N)"
+
+# 1 · y'' + y' - x y = 0   (recurrencia de tres términos: a_m = (a_{m-3} - (m-1) a_{m-1}) / (m (m-1)))
+_S1 = [_ser([1, 0], "(a3-(m-1)*a1)/(m*(m-1))"), _ser([0, 1], "(a3-(m-1)*a1)/(m*(m-1))")]
+for _l, _v, _lab in (("a", (1, 0), "y₁: y(0)=1, y′(0)=0"), ("b", (0, 1), "y₂: y(0)=0, y′(0)=1")):
+    explicit(f"h5-01-{_l}", _BASIS, _a(-3, 3, *_v) + [_N()], [-5, 4, -6, 6], r"y=a_0y_1(x)+a_1y_2(x)",
+             ode="y2+y1-x*y", series=_S1, particular=dict(values={"C1": _v[0], "C2": _v[1]}, label=_lab))
+
+# 2 · y'' + (p + 1/2 - x²/4) y = 0,  y = w e^{-x²/4},  w'' - x w' + p w = 0  (a_m = (m-2-p) a_{m-2} / (m (m-1)))
+_S2 = [_ser([1, 0], "(m-2-p)*a2/(m*(m-1))"), _ser([0, 1], "(m-2-p)*a2/(m*(m-1))")]
+explicit("h5-02", "exp(-x^2/4)*(" + _BASIS + ")", _a(-3, 3, 1, 0) + [K("p", 0, 6, 2, sweep=False, step=0.5, label="p"), _N()],
+         [-6, 6, -3, 3], r"y=e^{-x^2/4}\left[a_0w_1(x)+a_1w_2(x)\right]", ode="y2+(p+0.5-x^2/4)*y", series=_S2,
+         particular=dict(values={"C1": 1, "C2": 0}, label="a₀=1, a₁=0"))
+
+# 3 · Airy  y'' + s·x·y = 0  (s=1: y''+xy=0; s=-1: y''-xy=0)   a_m = -s a_{m-3} / (m (m-1))
+_S3 = [_ser([1, 0], "-s*a3/(m*(m-1))"), _ser([0, 1], "-s*a3/(m*(m-1))")]
+explicit("h5-03", _BASIS, _a(-3, 3, 1, 0) + [K("s", -1, 1, 1, sweep=False, step=2, label="s  (y″ + s·x·y = 0)"), _N(90)],
+         [-7, 7, -4, 4], r"y=a_0y_1(x)+a_1y_2(x)", ode="y2+s*x*y", series=_S3,
+         particular=dict(values={"C1": 1, "C2": 0}, label="a₀=1, a₁=0"))
+
+# 4 · Chebyshev  (1-x²) y'' - x y' + p² y = 0, |x|<1     a_m = ((m-2)² - p²) a_{m-2} / (m (m-1))
+_S4 = [_ser([1, 0], "((m-2)^2-p^2)*a2/(m*(m-1))"), _ser([0, 1], "((m-2)^2-p^2)*a2/(m*(m-1))")]
+explicit("h5-04", _BASIS, _a(-3, 3, 0, 1) + [K("p", 0, 6, 3, sweep=False, step=0.5, label="p"), _N(100)],
+         [-1, 1, -3, 3], r"y=a_0y_1(x)+a_1y_2(x),\;|x|<1", ode="(1-x^2)*y2-x*y1+p^2*y", series=_S4,
+         particular=dict(values={"C1": 0, "C2": 1}, label="a₀=0, a₁=1"))
+
+# 5 · Hermite  y'' - 2x y' + 2p y = 0     a_m = 2 (m-2-p) a_{m-2} / (m (m-1))
+_S5 = [_ser([1, 0], "2*(m-2-p)*a2/(m*(m-1))"), _ser([0, 1], "2*(m-2-p)*a2/(m*(m-1))")]
+explicit("h5-05", _BASIS, _a(-3, 3, 0, 1) + [K("p", 0, 6, 3, sweep=False, step=0.5, label="p"), _N()],
+         [-3, 3, -10, 10], r"y=a_0y_1(x)+a_1y_2(x)", ode="y2-2*x*y1+2*p*y", series=_S5,
+         particular=dict(values={"C1": 0, "C2": 1}, label="a₀=0, a₁=1"))
+
+# 6 · y'' - x y' - 2 y = 0     a_m = a_{m-2} / (m-1)
+_S6 = [_ser([1, 0], "a2/(m-1)"), _ser([0, 1], "a2/(m-1)")]
+explicit("h5-06", _BASIS, _a(-3, 3, 1, 1) + [_N()], [-3, 3, -15, 15], r"y=a_0y_1(x)+a_1y_2(x)", ode="y2-x*y1-2*y",
+         series=_S6, particular=dict(values={"C1": 1, "C2": 0}, label="a₀=1, a₁=0"))
+
+# 7 · y'' + x² y = 1 + x + x²     a_m = (b_{m-2} - a_{m-4}) / (m (m-1)),  b_0=b_1=b_2=1, b_k=0 (k≥3)
+_S7 = [_ser([1, 0], "-a4/(m*(m-1))"), _ser([0, 1], "-a4/(m*(m-1))"),
+       _ser([0, 0], "(sel(5-m,1,0)-a4)/(m*(m-1))")]
+explicit("h5-07", "C1*S(0,x,N)+C2*S(1,x,N)+S(2,x,N)", _a(-3, 3, 0, 0) + [_N()], [-5, 5, -6, 6],
+         r"y=a_0y_1(x)+a_1y_2(x)+y_p(x)", ode="y2+x^2*y-(1+x+x^2)", series=_S7,
+         particular=dict(values={"C1": 0, "C2": 0}, label="yₚ"))
+
+
 def sheet_ids(n: int):
     return [k for k, v in SPECS.items() if v["sheet"] == n]
 

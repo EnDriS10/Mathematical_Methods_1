@@ -99,16 +99,17 @@ Mueve las constantes y la curva elegida se resalta. (Necesita `ipywidgets`; en G
 code('interactive("h3-17")'),
 
 md("""## 6 · Figuras para el informe en LaTeX
-`export_figures` guarda un PDF vectorial por ejercicio en `figs/`; `patch_latex` crea una **copia** del `.tex` con cada figura
-(`\\includegraphics`) al final de su ejercicio. El original no se toca."""),
-code('''files = export_figures("../figs", sheets=[1, 2, 3])          # figs/h1-01.pdf ... h3-20.pdf
+`export_figures` guarda un PDF vectorial por ejercicio (o por inciso) en `figs/`; `patch_latex` crea una **copia** del `.tex` con cada figura
+(`\\includegraphics`) en su ejercicio. El original (`tex/main.tex`) no se toca. Para generar los archivos de entrega `tex/Hoja_1.tex … Hoja_5.tex`
+(uno por hoja, con las figuras) usa `python scripts/split_sheets.py`."""),
+code('''files = export_figures("../figs", sheets=[1, 2, 3, 4, 5])    # figs/h1-01.pdf ... h5-07.pdf
 print(len(files), "figuras, p. ej.", files[0].name)
-n = patch_latex("../tex/Metodos_Matematicos_I.tex", "../tex/Metodos_Matematicos_I_con_graficas.tex", figdir="../figs")
+n = patch_latex("../tex/main.tex", "main_con_graficas.tex", figdir="../figs")      # copia de prueba (en notebooks/)
 print(n, "figuras insertadas en el .tex")'''),
 md("Constantes concretas por ejercicio al exportar: `export_figures(\"../figs\", ids=[\"h3-17\"], values={\"h3-17\": {\"a\": 2, \"C\": 8}})`."),
 
 md("""## 7 · Añadir una hoja nueva
-1. Escribe el LaTeX de la Hoja 4 en `tex/Metodos_Matematicos_I.tex`.
+1. Escribe el LaTeX de la hoja nueva en `tex/main.tex` (bajo `\\section{Hoja N}`).
 2. Añade una entrada por ejercicio en `edoviz/catalog.py` (copia una parecida). Por ejemplo:
 ```python
 level("h4-01", "x^2*y", K("C", -5, 5, 1), [-4, 4, -4, 4], r"x^2y=C", slope="-2*y/x")

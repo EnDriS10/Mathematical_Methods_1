@@ -33,6 +33,7 @@ FUNCS = {
     "floor": "np.floor", "ceil": "np.ceil",
     "min": "np.minimum", "max": "np.maximum",
     "sec": "_sec", "csc": "_csc", "cot": "_cot", "sel": "_sel",
+    "S": "_S",
 }
 # alias en castellano / otras convenciones
 ALIASES = {
@@ -51,6 +52,46 @@ def _cot(x): return 1.0 / np.tan(x)
 def _sel(c, a, b):
     """sel(c, a, b): a donde c > 0, b en el resto (equivalente a un if vectorizado)."""
     return np.where(np.asarray(c) > 0, a, b)
+
+
+# contexto de la evaluación en curso (lo fija ``plotting._eval``): ``S(i, x, N)`` necesita las series y las constantes
+CTX: dict = {"series": None, "env": None}
+_SERIES_CACHE: dict = {}
+
+
+def series_coeffs(sdef: dict, env: dict) -> np.ndarray:
+    """Coeficientes a_0..a_{n-1} de una serie definida por recurrencia.
+
+    ``sdef = {"init": [a0, a1, ...], "rec": "expr", "n": 120}``. Para cada m >= len(init) se evalúa ``rec`` con
+    ``m`` (índice del coeficiente), ``a1..a4`` (= a_{m-1}..a_{m-4}; 0 si el índice es negativo) y las constantes.
+    """
+    key = (id(sdef), tuple(sorted((k, float(v)) for k, v in env.items())))
+    hit = _SERIES_CACHE.get(key)
+    if hit is not None:
+        return hit
+    names = sorted(env)
+    fn = compile_expr(sdef["rec"], ["m", "a1", "a2", "a3", "a4"] + names)
+    a = [float(v) for v in sdef["init"]]
+    vals = {k: float(env[k]) for k in names}
+    for m in range(len(a), int(sdef.get("n", 120))):
+        g = [a[m - k] if m - k >= 0 else 0.0 for k in (1, 2, 3, 4)]
+        a.append(float(fn(m=float(m), a1=g[0], a2=g[1], a3=g[2], a4=g[3], **vals)))
+    out = np.array(a)
+    if len(_SERIES_CACHE) > 512:
+        _SERIES_CACHE.clear()
+    _SERIES_CACHE[key] = out
+    return out
+
+
+def _S(i, x, N):
+    """Suma parcial (Horner) de los primeros N términos de la serie i en x."""
+    sd = CTX["series"][int(np.asarray(i).flat[0])]
+    c = series_coeffs(sd, CTX["env"])[: max(int(np.asarray(N).flat[0]), 0)]
+    x = np.asarray(x, dtype=float)
+    y = np.zeros_like(x)
+    for cn in c[::-1]:
+        y = y * x + cn
+    return y
 
 
 class ExprError(ValueError):
@@ -155,7 +196,7 @@ class _Parser:
         raise ExprError(f"Expresión incompleta cerca de {val!r}")
 
 
-_NS = {"np": np, "_sec": _sec, "_csc": _csc, "_cot": _cot, "_sel": _sel, "__builtins__": {}}
+_NS = {"np": np, "_sec": _sec, "_csc": _csc, "_cot": _cot, "_sel": _sel, "_S": _S, "__builtins__": {}}
 
 
 class Expr:

@@ -1,4 +1,5 @@
 import sys
+import numpy as np
 from pathlib import Path
 
 import matplotlib
@@ -125,7 +126,7 @@ def test_plot_renders(id_):
 
 
 def test_tex_matches_catalog():
-    data = parse_tex(ROOT / "tex" / "Metodos_Matematicos_I.tex")
+    data = parse_tex(ROOT / "tex" / "main.tex")
     ids = {p["id"] for s in data["sheets"] for p in s["problems"]}
     base = {"-".join(i.split("-")[:2]) for i in IDS}          # h4-11-a -> h4-11
     assert base <= ids, sorted(base - ids)
@@ -137,7 +138,7 @@ def test_tex_matches_catalog():
 def test_patch_latex_inserts_one_figure_per_part(tmp_path):
     from edoviz import patch_latex
     out = tmp_path / "x.tex"
-    n = patch_latex(ROOT / "tex" / "Metodos_Matematicos_I.tex", out, figdir="figs")
+    n = patch_latex(ROOT / "tex" / "main.tex", out, figdir="figs")
     txt = out.read_text(encoding="utf-8")
     assert n == len(IDS) and txt.count("\\includegraphics") == len(IDS)
     for i in ("h4-11-a", "h4-16-h", "h4-17-f", "h3-17"):
@@ -152,3 +153,81 @@ def test_expression_language():
         compile_expr("2x", ["x"])
     with pytest.raises(ExprError):
         compile_expr("__import__('os')", [])
+
+
+# ----------------------------------------------------------------------------- Hoja 5: series de potencias
+H5 = [i for i in IDS if i.startswith("h5-")]
+
+
+def test_hoja5_in_catalog_and_tex():
+    data = parse_tex(ROOT / "tex" / "main.tex")
+    h5 = next(s for s in data["sheets"] if s["n"] == 5)
+    assert [p["num"] for p in h5["problems"]] == [1, 2, 3, 4, 5, 6, 7]
+    assert H5 == ["h5-01-a", "h5-01-b", "h5-02", "h5-03", "h5-04", "h5-05", "h5-06", "h5-07"]
+
+
+@pytest.mark.parametrize("id_", H5)
+def test_series_satisfy_ode(id_):
+    """Con N = 120 términos la suma parcial cumple la EDO (residuo ~ 0 en |x| < 0.7)."""
+    from edoviz.plotting import _eval, default_values
+    spec = catalog.get(id_)
+    env = {**default_values(spec), "N": 120, "C1": 0.7, "C2": -0.4}
+    x = np.array([-0.6, -0.2, 0.3, 0.65])
+    h = 1e-3
+    f = lambda xv: np.asarray(_eval(spec, spec["y"], env, x=xv), float)
+    y, y1, y2 = f(x), (f(x + h) - f(x - h)) / (2 * h), (f(x + h) - 2 * f(x) + f(x - h)) / h ** 2
+    res = _eval(spec, spec["ode"], env, x=x, y=y, y1=y1, y2=y2)
+    assert np.abs(res).max() < 1e-3
+
+
+def test_series_coefficients_match_hand_solution():
+    from edoviz.expr import series_coeffs
+    s1 = catalog.get("h5-01-a")["series"]                      # y'' + y' - x y = 0
+    a = series_coeffs(s1[0], {})[:6]
+    assert np.allclose(a, [1, 0, 0, 1 / 6, -1 / 24, 1 / 120])
+    b = series_coeffs(s1[1], {})[:6]
+    assert np.allclose(b, [0, 1, -1 / 2, 1 / 6, 1 / 24, -1 / 30])
+    s7 = catalog.get("h5-07")["series"]                        # y'' + x² y = 1 + x + x²: yp = x²/2 + x³/6 + x⁴/12 ...
+    yp = series_coeffs(s7[2], {})[:8]
+    assert np.allclose(yp, [0, 0, 1 / 2, 1 / 6, 1 / 12, 0, -1 / 60, -1 / 252])
+
+
+def test_n_slider_changes_curve_and_default_is_high():
+    from edoviz.plotting import _eval, default_values
+    spec = catalog.get("h5-06")
+    n = next(c for c in spec["consts"] if c["name"] == "N")
+    assert n["value"] >= 60 and n["max"] >= 100 and n.get("integer") and n.get("sweep") is False
+    env = default_values(spec)
+    x = np.array([2.5])
+    y_hi = _eval(spec, spec["y"], env, x=x)
+    y_lo = _eval(spec, spec["y"], {**env, "N": 3}, x=x)
+    assert abs(y_hi - y_lo) > 1
+
+
+def test_h5_hermite_polynomial_for_integer_p():
+    from edoviz.plotting import _eval, default_values
+    spec = catalog.get("h5-05")                                # p=3, a0=0, a1=1: y = x - 2x³/3 (polinomio de Hermite)
+    env = default_values(spec)
+    x = np.array([0.5, 1.7])
+    assert np.allclose(_eval(spec, spec["y"], env, x=x), x - 2 * x ** 3 / 3)
+
+
+def test_split_sheets(tmp_path):
+    import importlib.util
+    sp = importlib.util.spec_from_file_location("split_sheets", ROOT / "scripts" / "split_sheets.py")
+    mod = importlib.util.module_from_spec(sp); sp.loader.exec_module(mod)
+    files = mod.build(ROOT / "tex" / "main.tex", tmp_path)
+    assert [f.name for f in files] == [f"Hoja_{n}.tex" for n in range(1, 6)]
+    for f in files:
+        t = f.read_text(encoding="utf-8")
+        assert "\\section{Hoja" not in t and "Versión interactiva" in t and "endris10.github.io/Mathematical_Methods_1" in t
+        assert "únicamente para programar la página web" in t and "\\date{" in t
+    assert "\\date{6 de noviembre de 2026}" in files[4].read_text(encoding="utf-8")
+    assert sum(f.read_text(encoding="utf-8").count("\\includegraphics") for f in files) == len(IDS)
+
+
+def test_main_tex_has_no_web_note_and_repo_tex_folder():
+    main = (ROOT / "tex" / "main.tex").read_text(encoding="utf-8")
+    assert "Versión interactiva" not in main and "includegraphics" not in main
+    assert sorted(p.name for p in (ROOT / "tex").iterdir()) == ["Hoja_1.tex", "Hoja_2.tex", "Hoja_3.tex", "Hoja_4.tex", "Hoja_5.tex", "main.tex"]
+    assert (ROOT / "docs" / "main.pdf").stat().st_size > 50_000

@@ -78,6 +78,7 @@ def _restore_math(s: str, store) -> str:
 
 def to_html(src: str) -> str:
     s = re.sub(r"(?m)^\s*%.*$", "", src)                       # comentarios
+    s = re.sub(r"\$\\bm\{\$(.*?)\$\}", lambda m: "$\\bm{" + m.group(1) + "}$", s)    # «$\bm{$f(x)$}» mal anidado
     s = re.sub(r"\\begin\{tikzpicture\}.*?\\end\{tikzpicture\}", "\x00TRI\x00", s, flags=re.S)
     s, store = _protect_math(s)
     s = re.sub(r"\\(?:noindent|separador|quad|qquad)\b", " ", s)
@@ -104,7 +105,8 @@ def to_html(src: str) -> str:
 
 
 SECTION = re.compile(r"\\section\{([^}]*)\}")
-HEAD = re.compile(r"\\noindent\\textbf\{")
+# «\noindent\textbf{3. ...}» y también «\noindent {\bfseries 3. ...}»
+HEAD = re.compile(r"\\noindent\s*(?:\\textbf)?(?P<b>\{)(?:\\bfseries\s+)?(?=\d+\.)")
 
 
 def parse_tex(path) -> dict:
@@ -123,9 +125,9 @@ def parse_tex(path) -> dict:
         problems = []
         heads = list(HEAD.finditer(text))
         for k, h in enumerate(heads):
-            open_i = h.end() - 1
+            open_i = h.start("b")
             close_i = _match_brace(text, open_i)
-            head_txt = text[open_i + 1:close_i]
+            head_txt = re.sub(r"^\s*\\bfseries\s*", "", text[open_i + 1:close_i])
             end = heads[k + 1].start() if k + 1 < len(heads) else len(text)
             sol = text[close_i + 1:end]
             num_m = re.match(r"\s*(\d+)\.\s*(.*)", head_txt, re.S)

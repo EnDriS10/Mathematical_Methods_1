@@ -69,11 +69,12 @@
         this.eat();
         const name = ALIAS[val] || val;
         if (this.peek()[1] === '(') {
-          if (!(name in H)) throw new Error('Función desconocida: ' + val);
+          if (!(name in H) && !(name === 'S' && this.ctx.series)) throw new Error('Función desconocida: ' + val);
           this.eat('(');
           const args = [];
           if (this.peek()[1] !== ')') { args.push(this.expr()); while (this.peek()[1] === ',') { this.eat(','); args.push(this.expr()); } }
           this.eat(')');
+          if (name === 'S') return 'SER(' + args.join(',') + ',K)';       // serie de potencias: S(i, x, N)
           return 'H.' + name + '(' + args.join(',') + ')';
         }
         if (this.ctx.vars.has(val)) return 'v_' + val;
@@ -87,14 +88,38 @@
     }
   }
 
-  const cache = new Map();
+  const cache = new Map(), seriesCache = new Map();
+  const key0 = (series, cn) => JSON.stringify(series) + '|' + cn.join(',');
 
-  /* compile(texto, vars, constNames, defs) -> f(v1, v2, ..., K) donde K es el array de valores de las constantes. */
-  function compile(text, vars, constNames, defs) {
+  /* Series de potencias definidas por recurrencia (equivalente a series_coeffs de expr.py).
+   * series = [{init:[a0,a1..], rec:'expr en m,a1..a4 y constantes', n:120}, ...];  SER(i, x, N, K) = suma de los N primeros términos. */
+  function seriesRuntime(series, constNames) {
+    const recs = series.map((sd) => compile(sd.rec, ['m', 'a1', 'a2', 'a3', 'a4'], constNames));
+    const memo = series.map(() => null);
+    function coeffs(i, K) {
+      const hit = memo[i];
+      if (hit && hit.K.length === K.length && hit.K.every((v, j) => v === K[j])) return hit.c;
+      const sd = series[i], n = sd.n || 120, a = Float64Array.from(sd.init.concat(new Array(Math.max(0, n - sd.init.length)).fill(0)));
+      for (let m = sd.init.length; m < n; m++) {
+        a[m] = recs[i](m, m >= 1 ? a[m - 1] : 0, m >= 2 ? a[m - 2] : 0, m >= 3 ? a[m - 3] : 0, m >= 4 ? a[m - 4] : 0, K);
+      }
+      memo[i] = { K: K.slice(), c: a };
+      return a;
+    }
+    return (i, x, N, K) => {
+      const c = coeffs(i | 0, K), top = Math.min(Math.max(Math.floor(N), 0), c.length);
+      let y = 0;
+      for (let n = top - 1; n >= 0; n--) y = y * x + c[n];
+      return y;
+    };
+  }
+
+  /* compile(texto, vars, constNames, defs, series) -> f(v1, v2, ..., K) donde K es el array de valores de las constantes. */
+  function compile(text, vars, constNames, defs, series) {
     constNames = constNames || []; defs = defs || [];
-    const key = text + '|' + vars.join(',') + '|' + constNames.join(',') + '|' + JSON.stringify(defs);
+    const key = text + '|' + vars.join(',') + '|' + constNames.join(',') + '|' + JSON.stringify(defs) + '|' + (series ? JSON.stringify(series) : '');
     if (cache.has(key)) return cache.get(key);
-    const ctx = { vars: new Set(vars), consts: new Map(constNames.map((n, i) => [n, i])), defs: new Map() };
+    const ctx = { vars: new Set(vars), consts: new Map(constNames.map((n, i) => [n, i])), defs: new Map(), series: series || null };
     for (const [dn, dt] of defs) {
       const p = new Parser(tokenize(String(dt)), ctx);
       ctx.defs.set(dn, '(' + p.expr() + ')');
@@ -102,7 +127,9 @@
     const p = new Parser(tokenize(String(text)), ctx);
     const code = p.expr();
     if (p.i !== p.t.length) throw new Error('Sobran símbolos en «' + text + '»');
-    const fn = new Function('H', 'return function(' + vars.map((v) => 'v_' + v).concat(['K']).join(',') + '){return ' + code + ';}')(H);
+    let ser = null;
+    if (series) { if (!seriesCache.has(key0(series, constNames))) seriesCache.set(key0(series, constNames), seriesRuntime(series, constNames)); ser = seriesCache.get(key0(series, constNames)); }
+    const fn = new Function('H', 'SER', 'return function(' + vars.map((v) => 'v_' + v).concat(['K']).join(',') + '){return ' + code + ';}')(H, ser);
     cache.set(key, fn);
     return fn;
   }

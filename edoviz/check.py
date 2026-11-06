@@ -158,8 +158,40 @@ def check_analytic(spec, trials=6, seed=3, tol=1e-6):
     return count, worst, msgs
 
 
+def check_series(spec, n=40, seed=1, tol=1e-3):
+    """Specs con ``series``: la suma parcial (todos los términos) cumple la EDO.
+
+    Sin sympy (S(i, x, N) no es simbólico): se evalúa el residuo de la ``ode`` con derivadas por diferencias finitas
+    centrales en |x| < 0.7 (dentro del radio de convergencia de todas las series del catálogo) y constantes aleatorias.
+    """
+    from .plotting import _eval, default_values
+    rng = np.random.default_rng(seed)
+    msgs, worst, count = [], 0.0, 0
+    base = default_values(spec)
+    nmax = max(int(c["max"]) for c in spec["consts"] if c["name"] == "N")
+    h = 1e-3
+    for _ in range(n // 4):
+        env = dict(base)
+        env["N"] = nmax
+        for c in spec["consts"]:
+            if c["name"] not in ("N",) and c.get("sweep", True) and c.get("role") != "level":
+                env[c["name"]] = float(rng.uniform(c["min"], c["max"]))
+        x = rng.uniform(-0.7, 0.7, 4)
+        f = lambda xv: np.asarray(_eval(spec, spec["y"], env, x=xv), float)
+        y, yp, ypp = f(x), (f(x + h) - f(x - h)) / (2 * h), (f(x + h) - 2 * f(x) + f(x - h)) / h ** 2
+        res = np.abs(np.asarray(_eval(spec, spec["ode"], env, x=x, y=y, y1=yp, y2=ypp), float))
+        err = res / (1 + np.abs(y) + np.abs(ypp))
+        count += len(x)
+        worst = max(worst, float(err.max()))
+        if err.max() > tol:
+            msgs.append(f"residuo {err.max():.2e} con {env}")
+    return count, worst, msgs
+
+
 def check_spec(spec, n=40, seed=1, tol=1e-6):
     """Devuelve (n_comprobados, peor_error, mensajes)."""
+    if spec.get("series"):
+        return check_series(spec, n=n, seed=seed)
     rng = random.Random(seed)
     msgs, worst, count = [], 0.0, 0
     cn = [c["name"] for c in spec["consts"]]

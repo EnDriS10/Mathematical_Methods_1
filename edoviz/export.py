@@ -49,7 +49,7 @@ def export_figures(outdir="figs", sheets: Iterable[int] | None = None, ids: Iter
     return written
 
 
-_PROBLEM = re.compile(r"\\noindent\\textbf\{(\d+)\.")
+_PROBLEM = re.compile(r"\\noindent\s*(?:\\textbf\{|\{\\bfseries\s*)(\d+)\.")
 _ITEM = re.compile(r"\\begin\{itemize\}|\\end\{itemize\}|\\item\b")
 
 
@@ -87,7 +87,7 @@ def patch_latex(tex_in, tex_out, figdir="figs", width=r"0.8\linewidth", ext="pdf
         src = src.replace("\\usepackage{amsmath, amssymb, amsfonts}", "\\usepackage{amsmath, amssymb, amsfonts}\n\\usepackage{graphicx}", 1)
 
     # límites de cada ejercicio: hasta el siguiente \noindent\textbf{N. , \separador o \section / \end{document}
-    boundaries = [m.start() for m in re.finditer(r"\\noindent\\textbf\{\d+\.|\\separador|\\section\{|\\end\{document\}", src)]
+    boundaries = [m.start() for m in re.finditer(r"\\noindent\s*(?:\\textbf\{|\{\\bfseries\s*)\d+\.|\\separador|\\section\{|\\end\{document\}", src)]
     sections = [(m.start(), int(re.search(r"\d+", m.group(1)).group())) for m in re.finditer(r"\\section\{([^}]*)\}", src)]
     inserts = []                                   # (posición, texto)
     count = 0

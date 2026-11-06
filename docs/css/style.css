@@ -120,6 +120,21 @@ body.is-home .who { display: none; }
 .empty { background: var(--panel); border: 1px dashed var(--rule); border-radius: 16px; padding: 4rem 1.5rem; }
 .soon-msg { margin: 0; text-align: center; font: 600 1.6rem var(--serif); color: var(--muted); }
 
+/* vista previa del PDF (inicio) */
+.preview { margin-top: 3rem; }
+.preview-sub { margin: -.5rem 0 1rem; color: var(--muted); font-size: 1rem; }
+.pdf-bar { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; margin-bottom: .7rem; font-family: var(--sans); }
+.pdf-info { margin-right: auto; color: var(--muted); font-size: .9rem; font-variant-numeric: tabular-nums; }
+.pdf-zoom { display: inline-flex; gap: .3rem; }
+.pdf-btn { display: inline-flex; align-items: center; justify-content: center; min-width: 2.6rem; min-height: 2.6rem; padding: 0 1rem; font: 600 .92rem var(--sans); color: var(--ink); text-decoration: none; background: var(--panel); border: 1px solid var(--rule); border-radius: 999px; cursor: pointer; }
+.pdf-btn:hover { border-color: var(--accent); }
+.pdf-view { height: min(82vh, 980px); overflow: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; background: color-mix(in srgb, var(--ink) 8%, var(--bg)); border: 1px solid var(--rule); border-radius: 16px; padding: 14px; }
+.pdf-pages { display: flex; flex-direction: column; gap: 12px; width: 100%; margin: 0 auto; }
+.pdf-page { position: relative; width: 100%; background: #fff; box-shadow: 0 1px 6px rgba(0, 0, 0, .25); }
+.pdf-page canvas { display: block; width: 100%; height: 100%; }
+.pdf-fail { margin: 2rem 1rem; text-align: center; color: var(--muted); }
+@media (max-width: 720px) { .pdf-view { height: 75vh; padding: 8px; border-radius: 12px; } .pdf-info { flex-basis: 100%; } }
+
 [hidden] { display: none !important; }
 /* botón grande Resolución: pliega resolución + gráfica */
 .sol-toggle { display: flex; align-items: center; gap: .75rem; width: 100%; min-height: 3.2rem; padding: .7rem 1.4rem; font: 600 1.08rem var(--sans); color: var(--ink); text-align: left; cursor: pointer;

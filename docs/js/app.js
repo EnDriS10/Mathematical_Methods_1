@@ -53,8 +53,8 @@
     const eng = E(), cn = spec.consts.map((c) => c.name), base = spec.consts.map((c) => c.value);
     const idx = spec.consts.findIndex((c) => c.sweep !== false && !c.integer && c.role !== 'level');
     const c = spec.consts[idx], w = spec.window, view = { x0: w[0], x1: w[1], y0: w[2], y1: w[3] };
-    const fns = (Array.isArray(spec.y) ? spec.y : [spec.y]).map((t) => eng.compile(String(t), ['x'], cn, spec.defs || []));
-    const valid = spec.valid ? eng.compile(String(spec.valid), ['x'], cn, spec.defs || []) : null;
+    const fns = (Array.isArray(spec.y) ? spec.y : [spec.y]).map((t) => eng.compile(String(t), ['x'], cn, spec.defs || [], spec.series));
+    const valid = spec.valid ? eng.compile(String(spec.valid), ['x'], cn, spec.defs || [], spec.series) : null;
     const X0 = Float64Array.from({ length: 900 }, (_, i) => w[0] + (w[1] - w[0]) * i / 899);
     const make = (v) => { const K = base.slice(); K[idx] = v; const out = [];
       for (const f of fns) { const r = eng.sampleExplicit(f, valid, K, X0); out.push(...eng.splitCurve(r.X, r.Y, view)); } return out; };
@@ -77,8 +77,60 @@
     if (opts.strong) { path(fam.sel); ctx.strokeStyle = cssVar('--plot-bg'); ctx.lineWidth = opts.strong + 3.5; ctx.stroke(); ctx.strokeStyle = cssVar('--c-family'); ctx.lineWidth = opts.strong; ctx.stroke(); }
     ctx.restore();
   }
-  const THUMBS = { 1: 'h1-12', 2: 'h2-11', 3: 'h3-10', 4: 'h4-11-j' };
+  const THUMBS = { 1: 'h1-12', 2: 'h2-11', 3: 'h3-10', 4: 'h4-11-j', 5: 'h5-02' };
   let homeCleanup = null;
+
+  /* ---------- vista previa del PDF con las resoluciones (docs/main.pdf, generado con scripts/build_pdf.py) ---------- */
+  const PDF = { url: 'main.pdf', lib: 'vendor/pdfjs/pdf.min.js', worker: 'vendor/pdfjs/pdf.worker.min.js', name: 'Resoluciones_Metodos_Matematicos_I.pdf' };
+  const loadScript = (src) => new Promise((ok, fail) => { const t = document.createElement('script'); t.src = src; t.onload = ok; t.onerror = fail; document.head.append(t); });
+
+  function pdfPreview() {
+    let doc = null, dead = false, zoom = 1, io = null, ro = null, timer = 0;
+    const pages = el('div', { class: 'pdf-pages' }), view = el('div', { class: 'pdf-view', tabindex: '0', role: 'region', 'aria-label': 'Vista previa del PDF con las resoluciones' }, pages);
+    const info = el('span', { class: 'pdf-info', 'aria-live': 'polite' }, 'Se carga al llegar aquí…');
+    const zoomBtn = (txt, label, d) => el('button', { type: 'button', class: 'pdf-btn', 'aria-label': label, onclick: () => { zoom = Math.min(2.5, Math.max(1, +(zoom + d).toFixed(2))); pages.style.width = zoom * 100 + '%'; } }, txt);
+    const bar = el('div', { class: 'pdf-bar' }, info,
+      el('span', { class: 'pdf-zoom' }, zoomBtn('−', 'Alejar', -0.25), zoomBtn('+', 'Ampliar', 0.25)),
+      el('a', { class: 'pdf-btn', href: PDF.url, target: '_blank', rel: 'noopener' }, 'Abrir PDF'),
+      el('a', { class: 'pdf-btn', href: PDF.url, download: PDF.name }, 'Descargar'));
+    const node = el('section', { class: 'home preview' }, el('h2', { class: 'home-title' }, 'Resoluciones en PDF'),
+      el('p', { class: 'preview-sub' }, 'Vista previa del documento con todas las soluciones. Las gráficas no están aquí: están en cada hoja.'), bar, view);
+
+    async function renderPage(box) {
+      const n = +box.dataset.n, w = box.clientWidth;
+      if (!doc || !w || box.dataset.w === String(w)) return;
+      box.dataset.w = String(w);
+      const page = await doc.getPage(n);
+      if (dead) return;
+      const base = page.getViewport({ scale: 1 }), dpr = Math.min(2, window.devicePixelRatio || 1);
+      const vp = page.getViewport({ scale: w / base.width * dpr });
+      const cv = box.querySelector('canvas') || box.appendChild(el('canvas'));
+      cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
+      await page.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
+    }
+    async function start() {
+      try {
+        await loadScript(PDF.lib);
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDF.worker;
+        doc = await window.pdfjsLib.getDocument(PDF.url).promise;
+        if (dead) return;
+        const first = await doc.getPage(1), vp = first.getViewport({ scale: 1 });
+        for (let n = 1; n <= doc.numPages; n++) pages.append(el('div', { class: 'pdf-page', 'data-n': n, style: 'aspect-ratio:' + vp.width + '/' + vp.height }));
+        const upd = () => { const b = pages.firstElementChild; if (!b) return; const k = Math.min(doc.numPages, Math.max(1, Math.floor((view.scrollTop + view.clientHeight / 3) / (b.offsetHeight + 12)) + 1)); info.textContent = 'Página ' + k + ' de ' + doc.numPages; };
+        upd(); view.addEventListener('scroll', () => requestAnimationFrame(upd), { passive: true });
+        io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) renderPage(e.target).catch(() => {}); }), { root: view, rootMargin: '900px 0px' });
+        pages.querySelectorAll('.pdf-page').forEach((b) => io.observe(b));
+        ro = new ResizeObserver(() => { clearTimeout(timer); timer = setTimeout(() => { io.disconnect(); pages.querySelectorAll('.pdf-page').forEach((b) => io.observe(b)); }, 200); });
+        ro.observe(pages);
+      } catch (err) {
+        info.textContent = 'No se pudo cargar la vista previa.';
+        view.replaceChildren(el('p', { class: 'pdf-fail' }, 'Puedes abrir el documento directamente: ', el('a', { href: PDF.url, target: '_blank', rel: 'noopener' }, 'abrir PDF'), '.'));
+      }
+    }
+    const lazy = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { lazy.disconnect(); start(); } }, { rootMargin: '300px 0px' });
+    lazy.observe(node);
+    return { node, destroy() { dead = true; lazy.disconnect(); if (io) io.disconnect(); if (ro) ro.disconnect(); clearTimeout(timer); if (doc) doc.destroy(); } };
+  }
 
   /* Página de inicio: portada con curvas integrales y una tarjeta por hoja */
   function home() {
@@ -109,7 +161,8 @@
           el('span', { class: 'card-meta' }, n ? n + (n === 1 ? ' ejercicio' : ' ejercicios') : 'Próximamente')),
         sh.desc ? el('span', { class: 'card-desc' }, sh.desc) : '');
     });
-    main.replaceChildren(hero, el('section', { class: 'home' }, el('h2', { class: 'home-title' }, 'Elige una hoja'), el('div', { class: 'cards' }, ...cards)));
+    const pv = pdfPreview();
+    main.replaceChildren(hero, el('section', { class: 'home' }, el('h2', { class: 'home-title' }, 'Elige una hoja'), el('div', { class: 'cards' }, ...cards)), pv.node);
     window.scrollTo(0, 0);
 
     const heroSpec = catalog['h1-12'], fams = new Map();
@@ -125,7 +178,7 @@
     }
     const ro = new ResizeObserver(() => { if (finished) redraw(); else drawThumbs(); }); ro.observe(heroCv); thumbs.forEach(([cv]) => ro.observe(cv));
     const mo = new MutationObserver(redraw); mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-    homeCleanup = () => { cancelAnimationFrame(raf); ro.disconnect(); mo.disconnect(); homeCleanup = null; };
+    homeCleanup = () => { cancelAnimationFrame(raf); ro.disconnect(); mo.disconnect(); pv.destroy(); homeCleanup = null; };
   }
 
   /* ---------- ejercicios ---------- */
@@ -167,7 +220,7 @@
         const c = li.cloneNode(true), st = c.querySelector(':scope > strong'), stmt = st.innerHTML;
         const letter = /^\((\w+)\)/.exec(st.textContent.trim())[1];
         st.remove();
-        return { letter, stmt, sol: c.innerHTML.replace(/^(\s|<br>)+/, '') };
+        return { letter, stmt, sol: c.innerHTML.replace(/^(\s|<br>|:)+/, '') };
       });
       const before = [], after = []; let seen = false;
       for (const n of tpl.content.childNodes) { if (n === ul) { seen = true; continue; } (seen ? after : before).push(n.cloneNode(true)); }

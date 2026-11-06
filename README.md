@@ -9,7 +9,7 @@ Este repositorio tiene tres piezas que comparten los mismos datos:
 |---|---|---|
 | **Paquete Python `edoviz`** + **notebook** | Graficar con funciones (matplotlib) y exportar figuras al LaTeX | `edoviz/`, `notebooks/edo_graficas.ipynb` |
 | **Web interactiva** (GitHub Pages) | Ver la resolución de cada hoja y mover las constantes con sliders | `docs/` |
-| **LaTeX** | Tus resoluciones y el informe con las figuras insertadas | `tex/`, `figs/` |
+| **LaTeX** | Tus resoluciones (`tex/main.tex`) y una entrega por hoja con las figuras (`tex/Hoja_N.tex`) | `tex/`, `figs/` |
 
 Cada ejercicio está descrito **una sola vez** en `edoviz/catalog.py` (la solución como texto + el rango de sus constantes).
 Python lo dibuja con matplotlib y la web lo dibuja en el navegador con el mismo texto (un test comprueba que ambos motores dan los mismos valores).
@@ -51,17 +51,28 @@ interactive("h3-17")                                    # sliders dentro de Jupy
 Las expresiones son texto: `+ - * / ^`, `sin cos tan asin acos atan sinh cosh tanh exp log(=ln) sqrt cbrt abs sign min max`,
 constantes `pi` y `e`. No hay multiplicación implícita (`2*x`, no `2x`).
 
-## Figuras para el LaTeX
+## Figuras y entregas en LaTeX
+
+La carpeta `tex/` tiene 6 archivos:
+
+| Archivo | Qué es |
+|---|---|
+| `main.tex` | Tus resoluciones de todas las hojas, **sin gráficas** (es lo que se previsualiza en la web) |
+| `Hoja_1.tex` … `Hoja_5.tex` | Una hoja por archivo, para entregar: sin `\section{Hoja N}`, con fecha, la nota del enlace a la web y las figuras |
+
+Los `Hoja_N.tex` **se generan** a partir de `main.tex`; no se editan a mano:
 
 ```bash
-python scripts/export_figures.py --patch
+python scripts/export_figures.py --patch   # figuras figs/*.pdf  +  tex/Hoja_N.tex
+python scripts/split_sheets.py             # solo los tex/Hoja_N.tex (las figuras ya existen)
 ```
 
-Crea una figura por ejercicio, `figs/h1-01.pdf … h4-19.pdf` (PDF vectorial), y una **por inciso** cuando el ejercicio los tiene:
-`figs/h4-11-a.pdf`, `h4-11-b.pdf`… (cada una se inserta justo debajo de su inciso en el `.tex`) y `tex/Metodos_Matematicos_I_con_graficas.tex`: una copia de tu `.tex`
-con cada figura al final de su ejercicio (`\includegraphics{../figs/...}`; tu `.tex` original no se modifica).
-Opciones: `--sheets 3`, `--png`. Desde Python: `export_figures(...)`, `patch_latex(...)`; constantes concretas por
-ejercicio con `values={"h3-17": {"a": 2, "C": 8}}`.
+`figs/` contiene un PDF vectorial por ejercicio (`figs/h1-01.pdf … h5-07.pdf`) y uno **por inciso** cuando los hay:
+`figs/h4-11-a.pdf`, `h4-11-b.pdf`… (cada uno se inserta justo debajo de su inciso). Los `Hoja_N.tex` buscan las figuras en
+`figs/` (Overleaf: sube la carpeta `figs` junto al `.tex`) o en `../figs/` (este repositorio). Las fechas de entrega y la URL de
+la web están al principio de `scripts/split_sheets.py` (`DATES`, `URL`).
+Opciones de `export_figures.py`: `--sheets 3`, `--png`. Desde Python: `export_figures(...)`, `patch_latex(...)`;
+constantes concretas por ejercicio con `values={"h3-17": {"a": 2, "C": 8}}`.
 
 ## La web
 
@@ -76,6 +87,19 @@ En cada ejercicio: **sliders** por constante (la curva elegida se resalta en tra
 **clic** en el gráfico para elegir la curva que pasa por ese punto, **rueda** para ampliar, **arrastrar** para mover,
 campo de direcciones, soluciones singulares/particulares y **Descargar PNG**. Enlaces directos: `#hoja-3/17`.
 
+En las EDO de **2.º orden** el campo de direcciones se sustituye por el *campo de arcos* (en cada punto, la curvatura y″ de la solución
+con pendiente y′ fijada con un deslizador) y por el **diagrama de fases** (y, y′); en órdenes superiores no se ofrece ninguno.
+En la **Hoja 5** (series de potencias) un deslizador elige cuántos términos N de la serie se dibujan (por defecto, un número alto).
+
+### Vista previa del PDF en la página de inicio
+
+Debajo de las tarjetas de las hojas se ve `docs/main.pdf` (visor con pdf.js, incluido en `docs/vendor/pdfjs`). Ese PDF se genera desde
+`tex/main.tex`, así que **cada vez que cambies `main.tex`** ejecuta (necesita `pdflatex`) y sube `docs/main.pdf`:
+
+```bash
+python scripts/build_pdf.py
+```
+
 ### Publicarla en GitHub Pages
 
 ```bash
@@ -89,43 +113,28 @@ git push -u origin main
 Después, en GitHub: **Settings → Pages → Build and deployment → Source: Deploy from a branch → Branch: `main`, carpeta `/docs`**.
 La web quedará en `https://<tu-usuario>.github.io/<repositorio>/`. No hay que compilar nada: KaTeX (las fórmulas) va incluido en `docs/vendor/`.
 
-## Añadir la Hoja 5 (o cualquier ejercicio nuevo)
+## Añadir una hoja (o un ejercicio) nuevo
 
-1. Escribe la resolución en `tex/Metodos_Matematicos_I.tex` bajo `\section{Hoja 5}`, con el mismo formato (`\noindent\textbf{1. ...}`).
+1. Escribe la resolución en `tex/main.tex` bajo `\section{Hoja 6}`, con el mismo formato (`\noindent\textbf{1. ...}` o `\noindent {\bfseries 1. ...}`).
 2. Añade una entrada por ejercicio en `edoviz/catalog.py`. Copia una parecida; los tipos son `level` (implícita),
    `explicit`, `param` y `ortho`:
    ```python
-   level("h5-01", "x^2*y", K("C", -5, 5, 1), [-4, 4, -4, 4], r"x^2y=C", slope="-2*y/x")
-   explicit("h5-02", "C*exp(2*x)", [K("C", -3, 3, 1)], [-2, 2, -6, 6], r"y=Ce^{2x}", slope="2*y")
+   level("h6-01", "x^2*y", K("C", -5, 5, 1), [-4, 4, -4, 4], r"x^2y=C", slope="-2*y/x")
+   explicit("h6-02", "C*exp(2*x)", [K("C", -3, 3, 1)], [-2, 2, -6, 6], r"y=Ce^{2x}", slope="2*y")
    ```
-3. Comprueba que la solución cumple la EDO: `python -m edoviz.check h5-01`
-   (derivación simbólica con sympy; si no das `slope`, pasa `ode="..."` con `y1,y2,y3` = derivadas, igualada a 0).
-   Si el ejercicio tiene incisos, una entrada por inciso con el sufijo de la letra (`h4-11-a`, `h4-11-b`…): la web los muestra con un
-   selector y las figuras se llaman igual. Los ejercicios teóricos (sin gráfica) no necesitan entrada.
-4. Añade una descripción breve de la hoja en `config.json` (`"descriptions": {"5": "..."}`); aparece en la tarjeta de inicio y al abrir la hoja.
-5. `python scripts/build_site.py`, y de nuevo `git add . && git commit && git push`.
-
-Campos útiles del catálogo: `extras=[...]` (soluciones singulares, discontinuas), `particular=...` (condición inicial, en verde),
-`slope="..."` (campo de direcciones), `valid="expr"` (dibuja solo donde expr ≥ 0), `aspect="equal"`.
-
-## Comprobaciones
-
-```bash
-pytest -q
-```
-
-Más de 400 tests: cada una de las soluciones del catálogo **cumple su EDO** (derivación simbólica y evaluación en puntos aleatorios),
-todas las gráficas se dibujan, el parser de tu `.tex` encuentra los mismos ejercicios que el catálogo y el motor de expresiones de la web (JS)
-coincide con el de Python.
+   Series de potencias (Hoja 5): `series=[{init, rec}]` define cada serie por su recurrencia y la expresión usa `S(i, x, N)`
+   (suma de los N primeros términos); mira `h5-0x` en el catálogo.
+3. Regenera: `python scripts/export_figures.py --patch`, `python scripts/build_site.py` y `python scripts/build_pdf.py`.
+   Añade la fecha de la hoja en `DATES` de `scripts/split_sheets.py`.
 
 ## Estructura
 
 ```
 edoviz/            paquete Python (expr, catalog, plotting, check, export, texparse, widgets)
 notebooks/         edo_graficas.ipynb (generado por scripts/make_notebook.py)
-scripts/           build_site.py · export_figures.py · make_notebook.py
-docs/              la web (GitHub Pages): index.html, css/, js/, data/, vendor/katex
-tex/  figs/        LaTeX y figuras exportadas
+scripts/           build_site.py · export_figures.py · split_sheets.py · build_pdf.py · make_notebook.py
+docs/              la web (GitHub Pages): index.html, main.pdf, css/, js/, data/, vendor/katex y pdfjs
+tex/  figs/        main.tex + Hoja_1..5.tex (generados) y figuras exportadas
 tests/             pytest
 config.json        nombre, asignatura y ruta del .tex que muestra la web
 ```

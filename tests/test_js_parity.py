@@ -78,7 +78,7 @@ def build_cases():
             for k, v in enumerate(vars_):
                 kw[v] = np.array([p[k] for p in pts])
             vals = np.broadcast_to(np.asarray(_eval(spec, text, env, **kw), float), (len(pts),))
-            cases.append(dict(id=id_, text=text, vars=vars_, constNames=cn, defs=spec.get("defs", []), K=K,
+            cases.append(dict(id=id_, text=text, vars=vars_, constNames=cn, defs=spec.get("defs", []), series=spec.get("series"), K=K,
                               points=pts, expected=[float(v) if np.isfinite(v) else None for v in vals]))
     return cases
 

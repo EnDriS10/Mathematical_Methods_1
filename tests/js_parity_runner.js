@@ -3,7 +3,7 @@ const E = require('../docs/js/engine.js');
 const cases = JSON.parse(require('fs').readFileSync(process.argv[2], 'utf8'));
 let bad = 0, total = 0;
 for (const c of cases) {
-  const f = E.compile(c.text, c.vars, c.constNames, c.defs);
+  const f = E.compile(c.text, c.vars, c.constNames, c.defs, c.series);
   c.points.forEach((pt, i) => {
     const got = f(...pt, c.K), exp = c.expected[i];
     total++;
