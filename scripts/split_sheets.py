@@ -48,6 +48,9 @@ def build(tex_in=None, outdir=None, url=URL):
     head, rest = src.split(r"\begin{document}", 1)
     head = head.replace(r"\usepackage{bm}", "\\usepackage{bm}\n\\usepackage[hidelinks]{hyperref}\n\\graphicspath{{figs/}{../figs/}}", 1)
     rest = rest.replace(r"\end{document}", "")
+    # las hojas individuales no llevan la línea discontinua entre hojas (solo main.tex): fuera \separador y su definición
+    head = re.sub(r"(?m)^% Línea discontinua entre ejercicios\n\\newcommand\{\\separador\}.*\n?", "", head)
+    rest = re.sub(r"(?m)^[ \t]*\\separador[ \t]*\n?", "", rest)
     out.mkdir(parents=True, exist_ok=True)
     written = []
     for p in re.split(r"(?=\\section\{Hoja \d+\})", rest):

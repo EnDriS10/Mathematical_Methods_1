@@ -220,6 +220,7 @@ def test_split_sheets(tmp_path):
     assert [f.name for f in files] == [f"Hoja_{n}.tex" for n in range(1, 6)]
     for f in files:
         t = f.read_text(encoding="utf-8")
+        assert "separador" not in t
         assert "\\section{Hoja" not in t and "Versión interactiva" in t and "endris10.github.io/Mathematical_Methods_1" in t
         assert "únicamente para programar la página web" in t and "\\date{" in t
     assert "\\date{6 de noviembre de 2026}" in files[4].read_text(encoding="utf-8")
@@ -228,6 +229,6 @@ def test_split_sheets(tmp_path):
 
 def test_main_tex_has_no_web_note_and_repo_tex_folder():
     main = (ROOT / "tex" / "main.tex").read_text(encoding="utf-8")
-    assert "Versión interactiva" not in main and "includegraphics" not in main
+    assert "Versión interactiva" not in main and "includegraphics" not in main and "\\newcommand{\\separador}" in main
     assert sorted(p.name for p in (ROOT / "tex").iterdir()) == ["Hoja_1.tex", "Hoja_2.tex", "Hoja_3.tex", "Hoja_4.tex", "Hoja_5.tex", "main.tex"]
     assert (ROOT / "docs" / "main.pdf").stat().st_size > 50_000
