@@ -76,7 +76,29 @@ def _restore_math(s: str, store) -> str:
     return re.sub(r"\x00M(\d+)\x00", back, s)
 
 
+_PARA_INCISO = re.compile(r"(?m)^[ \t]*(?:\\medskip[ \t]*\n[ \t]*)?\\noindent\s*\\textbf\{(?=\()")
+
+
+def _incisos_to_itemize(src: str) -> str:
+    """Incisos escritos como párrafos («\\medskip\\noindent\\textbf{(a) ...}») -> lista ``\\item \\textbf{(a) ...}``.
+
+    Así la web puede separarlos en pestañas igual que los incisos de una lista. Solo se aplica a incisos de nivel superior
+    (fuera de cualquier ``itemize``) y cuando hay al menos dos.
+    """
+    ms = [m for m in _PARA_INCISO.finditer(src) if re.match(r"\(\w+\)", src[m.end():m.end() + 6])]
+    if len(ms) < 2:
+        return src
+    before = src[:ms[0].start()]
+    if before.count("\\begin{itemize}") != before.count("\\end{itemize}"):
+        return src
+    out = src
+    for m in reversed(ms):
+        out = out[:m.start()] + "\\item \\textbf{" + out[m.end():]
+    return out[:ms[0].start()] + "\\begin{itemize}\n" + out[ms[0].start():].rstrip() + "\n\\end{itemize}\n"
+
+
 def to_html(src: str) -> str:
+    src = _incisos_to_itemize(src)
     s = re.sub(r"(?m)^\s*%.*$", "", src)                       # comentarios
     s = re.sub(r"\$\\bm\{\$(.*?)\$\}", lambda m: "$\\bm{" + m.group(1) + "}$", s)    # «$\bm{$f(x)$}» mal anidado
     s = re.sub(r"\\begin\{tikzpicture\}.*?\\end\{tikzpicture\}", "\x00TRI\x00", s, flags=re.S)

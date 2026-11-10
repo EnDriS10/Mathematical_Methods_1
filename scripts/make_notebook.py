@@ -100,9 +100,9 @@ code('interactive("h3-17")'),
 
 md("""## 6 · Figuras para el informe en LaTeX
 `export_figures` guarda un PDF vectorial por ejercicio (o por inciso) en `figs/`; `patch_latex` crea una **copia** del `.tex` con cada figura
-(`\\includegraphics`) en su ejercicio. El original (`tex/main.tex`) no se toca. Para generar los archivos de entrega `tex/Hoja_1.tex … Hoja_5.tex`
+(`\\includegraphics`) en su ejercicio. El original (`tex/main.tex`) no se toca. Para generar los archivos de entrega `tex/Hoja_1.tex … Hoja_6.tex`
 (uno por hoja, con las figuras) usa `python scripts/split_sheets.py`."""),
-code('''files = export_figures("../figs", sheets=[1, 2, 3, 4, 5])    # figs/h1-01.pdf ... h5-07.pdf
+code('''files = export_figures("../figs", sheets=[1, 2, 3, 4, 5, 6])    # figs/h1-01.pdf ... h6-07.pdf
 print(len(files), "figuras, p. ej.", files[0].name)
 n = patch_latex("../tex/main.tex", "main_con_graficas.tex", figdir="../figs")      # copia de prueba (en notebooks/)
 print(n, "figuras insertadas en el .tex")'''),

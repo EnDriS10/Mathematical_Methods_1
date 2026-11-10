@@ -64,18 +64,28 @@ def series_coeffs(sdef: dict, env: dict) -> np.ndarray:
 
     ``sdef = {"init": [a0, a1, ...], "rec": "expr", "n": 120}``. Para cada m >= len(init) se evalúa ``rec`` con
     ``m`` (índice del coeficiente), ``a1..a4`` (= a_{m-1}..a_{m-4}; 0 si el índice es negativo) y las constantes.
+
+    Opcional ``"conv": "q"``: ``c1`` es la suma de Cauchy  c1 = sum_{j=0}^{m-1} q^j / j! * a_{m-1-j}  (coeficiente de
+    x^{m-1} en e^{qx} * y); permite recurrencias donde interviene el producto con una exponencial (Hoja 6, problema 7).
     """
     key = (id(sdef), tuple(sorted((k, float(v)) for k, v in env.items())))
     hit = _SERIES_CACHE.get(key)
     if hit is not None:
         return hit
     names = sorted(env)
-    fn = compile_expr(sdef["rec"], ["m", "a1", "a2", "a3", "a4"] + names)
+    fn = compile_expr(sdef["rec"], ["m", "a1", "a2", "a3", "a4", "c1"] + names)
     a = [float(v) for v in sdef["init"]]
     vals = {k: float(env[k]) for k in names}
+    q = float(compile_expr(sdef["conv"], names)(**vals)) if sdef.get("conv") else None
     for m in range(len(a), int(sdef.get("n", 120))):
         g = [a[m - k] if m - k >= 0 else 0.0 for k in (1, 2, 3, 4)]
-        a.append(float(fn(m=float(m), a1=g[0], a2=g[1], a3=g[2], a4=g[3], **vals)))
+        c1 = 0.0
+        if q is not None:                                  # suma de Cauchy con e^{q x}
+            t, c1 = 1.0, 0.0
+            for j in range(m):
+                c1 += t * a[m - 1 - j]
+                t *= q / (j + 1)
+        a.append(float(fn(m=float(m), a1=g[0], a2=g[1], a3=g[2], a4=g[3], c1=c1, **vals)))
     out = np.array(a)
     if len(_SERIES_CACHE) > 512:
         _SERIES_CACHE.clear()

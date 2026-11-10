@@ -60,7 +60,7 @@ def build(tex_in=None, outdir=None, url=URL):
         n = int(m.group(1))
         body = p[m.end():].strip()                          # sin \section{Hoja N}
         h = re.sub(r"(\\large Métodos Matemáticos I)", r"\1 --- Hoja %d" % n, head, count=1)
-        date = "\\date{%s}\n" % DATES[n] if n in DATES else ""
+        date = "\\date{%s}\n" % DATES.get(n, "")      # sin fecha conocida: \date{} vacío (si no, LaTeX pone la de compilación)
         doc = (h + date + "\\begin{document}\n\n\\maketitle\n\\vspace{-0.2cm}\n" + NOTE % dict(url=url, n=n)
                + "\n" + body + "\n\n\\end{document}\n")
         path = out / f"Hoja_{n}.tex"

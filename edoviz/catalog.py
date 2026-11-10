@@ -516,8 +516,11 @@ for _l, _yp, _f, _w, _t in [
 # Cada serie se define por su recurrencia (``series=[{init, rec}]``): el coeficiente a_m sale de ``rec`` en función de
 # m, a1..a4 (= a_{m-1}..a_{m-4}) y las constantes del spec (p, s...). ``S(i, x, N)`` = suma de los N primeros términos
 # de la serie i. El deslizador N (por defecto alto) elige cuántos términos de la serie se dibujan.
-def _ser(init, rec, n=130):
-    return dict(init=list(init), rec=rec, n=n)
+def _ser(init, rec, n=130, conv=None):
+    d = dict(init=list(init), rec=rec, n=n)
+    if conv:
+        d["conv"] = conv       # c1 = suma de Cauchy  sum_j q^j/j! a_{m-1-j}  con q = conv (Hoja 6, problema 7)
+    return d
 
 
 def _N(value=80, hi=120):
@@ -571,6 +574,66 @@ _S7 = [_ser([1, 0], "-a4/(m*(m-1))"), _ser([0, 1], "-a4/(m*(m-1))"),
 explicit("h5-07", "C1*S(0,x,N)+C2*S(1,x,N)+S(2,x,N)", _a(-3, 3, 0, 0) + [_N()], [-5, 5, -6, 6],
          r"y=a_0y_1(x)+a_1y_2(x)+y_p(x)", ode="y2+x^2*y-(1+x+x^2)", series=_S7,
          particular=dict(values={"C1": 0, "C2": 0}, label="yₚ"))
+
+
+# =====================================================================  HOJA 6 · series de Frobenius
+# y = C1·|x|^{m1}·S(0,x,N) + C2·|x|^{m2}·S(1,x,N): cada serie lleva su prefactor |x|^m (m = raíz de la ecuación indicial).
+# Los coeficientes salen de la recurrencia general del .tex (``rec`` con m = índice n y a1..a4 = a_{n-1}..a_{n-4}) con
+# a_0 = 1; las constantes C1, C2 son los a_0 de cada solución (valen igual para x>0 y x<0).
+def _c(v1=1, v2=0, lo=-3, hi=3, l1="C₁  (a₀ de y₁)", l2="C₂  (a₀ de y₂)"):
+    return [K("C1", lo, hi, v1, n=7, label=l1), K("C2", lo, hi, v2, n=7, label=l2)]
+
+
+_P6 = lambda: dict(values={"C1": 1, "C2": 0}, label="y₁ (a₀=1)")
+
+# 3 · (a) 2xy'' + (3-x)y' - y = 0     m=0: a_n = a_{n-1}/(2n+1);   m=-1/2: a_n = a_{n-1}/(2n)
+explicit("h6-03-a", "C1*S(0,x,N)+C2*abs(x)^(-0.5)*S(1,x,N)", _c() + [_N(60, 120)], [-5, 5, -5, 5],
+         r"y=C_1y_1(x)+C_2y_2(x)", ode="2*x*y2+(3-x)*y1-y", particular=_P6(),
+         series=[_ser([1], "a1/(2*m+1)"), _ser([1], "a1/(2*m)")])
+
+# 3 · (b) 2xy'' + (x+1)y' + 3y = 0    m=0: a_n = -(n+2) a_{n-1} / (n(2n-1));   m=1/2: a_n = -(2n+5) a_{n-1} / (2n(2n+1))
+explicit("h6-03-b", "C1*S(0,x,N)+C2*abs(x)^0.5*S(1,x,N)", _c() + [_N(60, 120)], [-5, 5, -5, 5],
+         r"y=C_1y_1(x)+C_2y_2(x)", ode="2*x*y2+(x+1)*y1+3*y", particular=_P6(),
+         series=[_ser([1], "-(m+2)*a1/(m*(2*m-1))"), _ser([1], "-(2*m+5)*a1/(2*m*(2*m+1))")])
+
+# 3 · (c) 2x²y'' + xy' - (x+1)y = 0   m=1: a_n = a_{n-1}/(n(2n+3));   m=-1/2: a_n = a_{n-1}/(n(2n-3))
+explicit("h6-03-c", "C1*abs(x)*S(0,x,N)+C2*abs(x)^(-0.5)*S(1,x,N)", _c() + [_N(60, 120)], [-5, 5, -5, 5],
+         r"y=C_1y_1(x)+C_2y_2(x)", ode="2*x^2*y2+x*y1-(x+1)*y", particular=_P6(),
+         series=[_ser([1], "a1/(m*(2*m+3))"), _ser([1], "a1/(m*(2*m-3))")])
+
+# 4 · 4x²y'' - 8x²y' + (4x²+1)y = 0   (raíz doble m=1/2)   n² a_n = (2n-1) a_{n-1} - a_{n-2}  (a_n = a_0/n!)
+explicit("h6-04", "C1*abs(x)^0.5*S(0,x,N)", [K("C1", -3, 3, 1, n=7, label="C  (a₀)"), _N(60, 120)], [-4, 4, -10, 10],
+         r"y=C\,|x|^{1/2}\sum_n a_nx^n", ode="4*x^2*y2-8*x^2*y1+(4*x^2+1)*y",
+         particular=dict(values={"C1": 1}, label="a₀=1"), series=[_ser([1], "((2*m-1)*a1-a2)/m^2")])
+
+# 5 · (a) x²y'' - x²y' + (x²-2)y = 0   m=2: n(n+3)a_n = (n+1)a_{n-1} - a_{n-2};   m=-1: n(n-3)a_n = (n-2)a_{n-1} - a_{n-2}  (a_3 = 0)
+explicit("h6-05-a", "C1*abs(x)^2*S(0,x,N)+C2*S(1,x,N)/abs(x)", _c() + [_N(60, 120)], [-5, 5, -6, 6],
+         r"y=C_1y_1(x)+C_2y_2(x)", ode="x^2*y2-x^2*y1+(x^2-2)*y", particular=_P6(),
+         series=[_ser([1], "((m+1)*a1-a2)/(m*(m+3))"), _ser([1], "((m-2)*a1-a2)/(m*(m-3)+sel(0.5-abs(m-3),1,0))")])
+
+# 5 · (b) x y'' - y' + 4x³y = 0    m=2: n(n+2)a_n = -4a_{n-4};   m=0: n(n-2)a_n = -4a_{n-4}   (solo potencias de x⁴)
+explicit("h6-05-b", "C1*abs(x)^2*S(0,x,N)+C2*S(1,x,N)", _c() + [_N(120, 150)], [-4, 4, -3, 3],
+         r"y=C_1y_1(x)+C_2y_2(x)", ode="x*y2-y1+4*x^3*y", particular=_P6(),
+         series=[_ser([1, 0, 0, 0], "-4*a4/(m*(m+2))", n=150), _ser([1, 0, 0, 0], "-4*a4/(m*(m-2))", n=150)])
+
+# 5 · (c) 2x²y'' + (3x-x²)y' - (x+1)y = 0   m=1/2: n(2n+3)a_n = (2n+1)/2 a_{n-1};   m=-1: y2 = 1/x (un solo término)
+explicit("h6-05-c", "C1*abs(x)^0.5*S(0,x,N)+C2/x", _c(l2="C₂  (y₂ = C₂/x)") + [_N(60, 120)], [-5, 5, -5, 5],
+         r"y=C_1y_1(x)+C_2\,\frac1x", ode="2*x^2*y2+(3*x-x^2)*y1-(x+1)*y", particular=_P6(),
+         series=[_ser([1], "(2*m+1)*a1/(2*m*(2*m+3))")])
+
+# 6 · Bessel p=1: x²y'' + xy' + (x²-1)y = 0   m=1: n(n+2)a_n = -a_{n-2}   (y = a_0·2J_1(x))
+explicit("h6-06", "C1*x*S(0,x,N)", [K("C1", -2, 2, 0.5, n=9, label="a₀"), _N(120, 130)], [-14, 14, -1.2, 1.2],
+         r"y=a_0\,x\sum_k\frac{(-1)^k}{4^kk!(k+1)!}x^{2k}=2a_0J_1(x)", ode="x^2*y2+x*y1+(x^2-1)*y",
+         particular=dict(values={"C1": 0.5}, label="a₀=½  (J₁)"), series=[_ser([1, 0], "-a2/(m*(m+2))")])
+
+# 7 · y'' + k(E - A e^{-αx}/x) y = 0   m=1:  n(n+1)a_n = kA·Σ_j (-α)^j/j!·a_{n-1-j} - kE·a_{n-2}   (suma de Cauchy)
+explicit("h6-07", "C1*abs(x)*S(0,x,N)",
+         [K("C1", -2, 2, 1, n=7, label="a₀"),
+          K("k", 0.2, 3, 1, sweep=False, step=0.05, label="k"), K("A", -3, 3, 1.5, sweep=False, step=0.1, label="A"),
+          K("alpha", -2, 2, 0.5, sweep=False, step=0.05, label="α"), K("E", -3, 3, 1, sweep=False, step=0.1, label="E"), _N(80, 120)],
+         [-5, 5, -5, 5], r"y=a_0\,|x|\left[1+\frac{kA}{2}x+\dots\right]", ode="y2+k*(E-A*exp(-alpha*x)/x)*y",
+         particular=dict(values={"C1": 1}, label="a₀=1"),
+         series=[_ser([1], "(k*A*c1-k*E*a2)/(m*(m+1))", conv="-alpha")])
 
 
 def sheet_ids(n: int):

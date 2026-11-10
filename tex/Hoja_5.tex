@@ -83,6 +83,10 @@ Evaluando, tenemos que $y(0) = a_0 = 0$ y $y'(0) = a_1 = 1$. Por lo tanto, la se
 \includegraphics[width=0.8\linewidth]{h5-01-b.pdf}
 \end{center}
 \end{itemize}
+\textbf{Radio de convergencia.} Usandoel teorema de soluciones en serie: los coeficientes $P(x)=1$ y $Q(x)=-x$ son polinomios, analíticos en todo $\mathbb{R}$, luego las series convergen para todo $x$:
+\[
+R_1=R_2=\infty
+\]
 
 
 \noindent\textbf{2. La EDO $\bm{y''+(p+\frac{1}{2}-\frac{x^2}{4})y=0}$, donde $\bm{p}$ es una constante, tiene una solución en serie de la forma $\bm{y=\sum a_{n}x^{n}}$: (a) demostrad que los coeficientes $\bm{a_{n}}$ están relacionados por una fórmula de recurrencia de tres términos; (b) si se hace el cambio de variable dependiente $\bm{y=we^{-x^2/4}}$, probad que la EDO original se transforma en $\bm{w''-xw'+pw=0}$; (c) comprobad que la EDO para $\bm{w}$ tiene una fórmula de recurrencia de dos términos y hallad la solución general.} \\
@@ -103,7 +107,9 @@ Igualando a cero el coeficiente general para todo $n \geq 0$, obtenemos la \text
 \begin{align*}
 a_{n+2} = \frac{\frac{1}{4}a_{n-2} - \left(p+\frac{1}{2}\right)a_n}{(n+2)(n+1)}
 \end{align*}
-Vemos claramente que cada coeficiente $a_{n+2}$ depende de los dos anteriores con la misma paridad ($a_n$ y $a_{n-2}$), conformando así una recurrencia de tres términos. \quad $\blacksquare$
+Vemos claramente que cada coeficiente $a_{n+2}$ depende de los dos anteriores con la misma paridad ($a_n$ y $a_{n-2}$), conformando así una recurrencia de tres términos. \quad $\blacksquare$ \\
+
+\textbf{Radio de convergencia.} Usando el teorema de soluciones en serie: $Q(x)=p+\frac12-\frac{x^2}{4}$ es un polinomio (analítico en todo $\mathbb{R}$), luego la serie converge para todo $x$: $R=\infty$.
 
 \vspace{0.2cm}\noindent\textbf{(b) Cambio $\bm{y=we^{-x^2/4}}$:} \\
 \begin{align*}
@@ -128,6 +134,12 @@ n=2 &\implies a_4 = \frac{2-p}{12}a_2 = \frac{-p(2-p)}{24}a_0 \\
 n=1 &\implies a_3 = \frac{1-p}{6}a_1 \\
 n=3 &\implies a_5 = \frac{3-p}{20}a_3 = \frac{(1-p)(3-p)}{120}a_1
 \end{align*}
+\textbf{Radio de convergencia.} Usando el criterio del cociente:
+\begin{align*}
+L = \lim_{n\to\infty}\left|\frac{a_{n+2}x^{n+2}}{a_nx^n}\right| = \lim_{n\to\infty}\frac{|n-p|}{(n+2)(n+1)}\,|x|^2 = 0 < 1 \implies R=\infty
+\end{align*}
+Como $e^{-x^2/4}$ es una función entera, el producto $y=we^{-x^2/4}$ también converge para todo $x$.
+
 La solución general es $y(x) = w(x)e^{-x^2/4}$:
 \[
 \boxed{y(x) = e^{-x^2/4} \left[ a_0\left(1 - \frac{p}{2}x^2 - \frac{p(2-p)}{24}x^4 + \dots\right) + a_1\left(x + \frac{1-p}{6}x^3 + \frac{(1-p)(3-p)}{120}x^5 + \dots\right) \right]}
@@ -172,10 +184,17 @@ Convergencia (Aplicamos la Prueba del Cociente):
 \begin{align*}
 L = \lim_{k\to\infty} \left| \frac{a_{3(k+1)}x^{3(k+1)}}{a_{3k}x^{3k}} \right| = \lim_{k\to\infty} \left| \frac{-x^3}{(3k+2)(3k+3)} \right| = 0 < 1 \implies R = \infty \quad \forall x \in \mathbb{R} \quad \blacksquare
 \end{align*}
+Análogamente, para $y_2$ (con $n=3k+2$ en la recurrencia, $a_{3k+4}=-\dfrac{a_{3k+1}}{(3k+4)(3k+3)}$):
+\begin{align*}
+L = \lim_{k\to\infty} \left| \frac{a_{3k+4}x^{3k+4}}{a_{3k+1}x^{3k+1}} \right| = \lim_{k\to\infty} \frac{|x|^3}{(3k+4)(3k+3)} = 0 < 1 \implies R = \infty
+\end{align*}
+Por tanto, $R_1=R_2=\infty$.
+
 Para resolver la segunda EDO $y''-xy=0$, hacemos el cambio $x \to -x$. Entonces, la solución para la nueva EDO se obtiene evaluando las series encontradas en $-x$:
 \[
 \boxed{y(x) = a_0\left(1 + \frac{1}{6}x^3 + \frac{1}{180}x^6 + \dots\right) + a_1\left(x + \frac{1}{12}x^4 + \frac{1}{504}x^7 + \dots\right)}
 \]
+\textbf{Radio de convergencia.} Estas series son las anteriores evaluadas en $-x$, así que convergen exactamente donde convergían aquellas: $R=\infty$ para ambas.\\
 
 
 
@@ -208,12 +227,12 @@ Resolviendo para las ramas par e impar:
 y_1(x) &= 1 - \frac{p^2}{2!}x^2 + \frac{(2^2-p^2)(-p^2)}{4!}x^4 + \dots \\
 y_2(x) &= x + \frac{1-p^2}{3!}x^3 + \frac{(3^2-p^2)(1-p^2)}{5!}x^5 + \dots
 \end{align*}
-Prueba del cociente: $L = \lim_{n\to\infty} \left| \frac{n^2-p^2}{(n+2)(n+1)} x^2 \right| = |x^2|$. Converge si $|x| < 1$. \\
+Prueba del cociente: $L = \lim_{n\to\infty} \left| \frac{n^2-p^2}{(n+2)(n+1)} x^2 \right| = |x^2|$. Converge si $|x| < 1$. Este límite es el mismo para la rama par ($y_1$) y la impar ($y_2$), así que ambas tienen radio de convergencia $R_1=R_2=1$, coherente con que $x=\pm1$ son los puntos singulares de la EDO ($1-x^2=0$). \\
 Si $p=n$ (donde $n$ es un entero positivo), en la fórmula de recurrencia $a_{k+2} = \frac{k^2 - n^2}{(k+2)(k+1)} a_k$ al evaluar en el índice $k = n$, el numerador se anula:
 \begin{align*}
 a_{n+2} = \frac{n^2 - n^2}{(n+2)(n+1)} a_n = 0
 \end{align*}
-Por lo tanto, a partir de ese término, $a_{n+2} = 0$ y, de forma sucesiva, todos los coeficientes siguientes con la misma paridad también se anulan ($a_{n+4} = 0, a_{n+6} = 0, \dots$). Esto hace que la serie infinita se convierta en un polinomio exacto de grado $n$, siendo por tanto una solución válida. \quad $\blacksquare$ \\
+Por lo tanto, a partir de ese término, $a_{n+2} = 0$ y, de forma sucesiva, todos los coeficientes siguientes con la misma paridad también se anulan ($a_{n+4} = 0, a_{n+6} = 0, \dots$). Esto hace que la serie infinita se convierta en un polinomio exacto de grado $n$, siendo por tanto una solución válida (y, al ser un polinomio, con radio de convergencia $R=\infty$). \quad $\blacksquare$ \\
 
 
 \begin{center}
@@ -234,7 +253,8 @@ Por el teorema mencionado en clase ambas series convergen para todo $\bm{x}$. Co
 \sum_{n=0}^{\infty} (n+2)(n+1)a_{n+2} x^n - \sum_{n=0}^{\infty} 2n a_n x^n + \sum_{n=0}^{\infty} 2p a_n x^n &= 0 \implies a_{n+2} = \frac{2(n-p)}{(n+2)(n+1)} a_n
 \end{align*}
 Evaluando $a_2, a_3, a_4\dots$ se recuperan exactamente las series $y_1(x)$ y $y_2(x)$ dadas en el enunciado. \\
-Convergencia: $L = \lim_{n\to\infty} \left| \frac{2(n-p)}{(n+2)(n+1)} x^2 \right| = 0 \implies$ Converge para todo $x \in \mathbb{R}$. \quad $\blacksquare$
+Convergencia: $L = \lim_{n\to\infty} \left| \frac{2(n-p)}{(n+2)(n+1)} x^2 \right| = 0 \implies$ Converge para todo $x \in \mathbb{R}$. \quad $\blacksquare$ \\
+Este límite es el mismo para $y_1$ (índices pares) y para $y_2$ (índices impares), luego $R_1=R_2=\infty$.
 
 \vspace{0.2cm}\noindent\textbf{(b) Polinomios no normalizados para $\bm{p=0,1,2,3,4,5}$:}
 \begin{itemize}
@@ -245,6 +265,7 @@ Convergencia: $L = \lim_{n\to\infty} \left| \frac{2(n-p)}{(n+2)(n+1)} x^2 \right
 \item $p=4 \implies y_1 = 1 - \frac{8}{2}x^2 + \frac{16(2)}{24}x^4 = 1 - 4x^2 + \frac{4}{3}x^4$.
 \item $p=5 \implies y_2 = x - \frac{8}{6}x^3 + \frac{16(2)}{120}x^5 = x - \frac{4}{3}x^3 + \frac{4}{15}x^5$. \quad $\checkmark$
 \end{itemize}
+Las series que terminan son polinomios, con $R=\infty$; la otra serie (que sigue siendo infinita) también tiene $R=\infty$ por el resultado de (a).
 
 \vspace{0.2cm}\noindent\textbf{(c) Polinomios de Hermite $\bm{H_n(x)}$ (con término dominante $\bm{2^n x^n}$):}
 \begin{itemize}
@@ -255,6 +276,7 @@ Convergencia: $L = \lim_{n\to\infty} \left| \frac{2(n-p)}{(n+2)(n+1)} x^2 \right
 \item $H_4(x) = (12) \cdot \left(1 - 4x^2 + \frac{4}{3}x^4\right) = \mathbf{16x^4 - 48x^2 + 12}$
 \item $H_5(x) = (120) \cdot \left(x - \frac{4}{3}x^3 + \frac{4}{15}x^5\right) = \mathbf{32x^5 - 160x^3 + 120x}$
 \end{itemize}
+Cada $H_n$ es un polinomio, luego su radio de convergencia es $R=\infty$.
 
 \vspace{0.2cm}\noindent\textbf{(d) $\bm{H_n(x) = (-1)^n e^{x^2} \frac{d^n}{dx^n} e^{-x^2}}$ :} \\
  Evaluando:
@@ -281,7 +303,7 @@ Calculando para índices pares e impares:
 a_2 &= a_0, \quad a_4 = \frac{1}{3}a_2 = \frac{1}{3}a_0, \quad a_6 = \frac{1}{5}a_4 = \frac{1}{15}a_0 \implies y_1(x) = 1 + x^2 + \frac{x^4}{3} + \frac{x^6}{15} + \dots \\
 a_3 &= \frac{1}{2}a_1, \quad a_5 = \frac{1}{4}a_3 = \frac{1}{8}a_1, \quad a_7 = \frac{1}{6}a_5 = \frac{1}{48}a_1 \implies y_2(x) = x + \frac{x^3}{2} + \frac{x^5}{8} + \frac{x^7}{48} + \dots 
 \end{align*}
-Prueba del cociente: $L = \lim_{n\to\infty} \left| \frac{1}{n+1} x^2 \right| = 0 < 1 \implies R = \infty$. 
+Prueba del cociente: $L = \lim_{n\to\infty} \left| \frac{1}{n+1} x^2 \right| = 0 < 1 \implies R = \infty$. Como el cociente entre términos consecutivos de la misma paridad es el mismo para ambas ramas, $y_1$ (pares) e $y_2$ (impares) tienen radio de convergencia $R_1=R_2=\infty$.
 \[
 \boxed{y(x) = a_0\left(1 + x^2 + \frac{x^4}{3} + \frac{x^6}{15} + \dots\right) + a_1\left(x + \frac{x^3}{2} + \frac{x^5}{8} + \frac{x^7}{48} + \dots\right)}
 \]
@@ -318,11 +340,15 @@ n=3: &\quad a_5 = \frac{b_3 - a_1}{5\cdot 4} = \frac{0 - a_1}{20} = -\frac{a_1}{
 n=4: &\quad a_6 = \frac{b_4 - a_2}{6\cdot 5} = \frac{0 - (1/2)}{30} = -\frac{1}{60} \\
 n=5: &\quad a_7 = \frac{b_5 - a_3}{7\cdot 6} = \frac{0 - (1/6)}{42} = -\frac{1}{252}
 \end{align*}
+\textbf{Radio de convergencia.} Para $n\geq3$ se tiene $b_n=0$ y la recurrencia queda $a_{n+2}=-\dfrac{a_{n-2}}{(n+2)(n+1)}$ para las tres partes de la solución (la que depende de $a_0$, la de $a_1$ y la particular). Aplicando el criterio del cociente con paso $4$:
+\begin{align*}
+L = \lim_{n\to\infty}\left|\frac{a_{n+2}x^{n+2}}{a_{n-2}x^{n-2}}\right| = \lim_{n\to\infty}\frac{|x|^4}{(n+2)(n+1)} = 0 < 1 \implies R=\infty
+\end{align*}
+
 Agrupando la solución general en su parte homogénea $y_h$ (dependiente de $a_0$ y $a_1$) y su parte particular $y_p$:
 \[
 \boxed{y(x) = a_0\left(1 - \frac{x^4}{12} + \frac{x^8}{672} - \dots\right) + a_1\left(x - \frac{x^5}{20} + \dots\right) + \left(\frac{x^2}{2} + \frac{x^3}{6} + \frac{x^4}{12} - \frac{x^6}{60} - \frac{x^7}{252} \dots\right)}
 \]
-
 
 \begin{center}
 \includegraphics[width=0.8\linewidth]{h5-07.pdf}

@@ -50,6 +50,7 @@ def export_figures(outdir="figs", sheets: Iterable[int] | None = None, ids: Iter
 
 
 _PROBLEM = re.compile(r"\\noindent\s*(?:\\textbf\{|\{\\bfseries\s*)(\d+)\.")
+_PARA_INCISO = re.compile(r"(?m)^[ \t]*(?:\\medskip[ \t]*\n[ \t]*)?\\noindent\s*\\textbf\{\(\w+\)")
 _ITEM = re.compile(r"\\begin\{itemize\}|\\end\{itemize\}|\\item\b")
 
 
@@ -101,8 +102,12 @@ def patch_latex(tex_in, tex_out, figdir="figs", width=r"0.8\linewidth", ext="pdf
             count += 1
         for pid in (i for i in catalog.SPECS if i.startswith(id_ + "-")):
             letter = catalog.SPECS[pid].get("part", pid.split("-")[-1])
-            im = re.compile(r"\\item\s*\\textbf\{\(" + re.escape(letter) + r"\)").search(src, start, nxt)
-            pos = _item_end(src, im.start(), nxt) if im else nxt
+            im = re.compile(r"(?:\\item|\\noindent)\s*\\textbf\{\(" + re.escape(letter) + r"\)").search(src, start, nxt)
+            if im and im.group().startswith("\\noindent"):      # inciso escrito como párrafo («\medskip\noindent\textbf{(a)...»)
+                nx = _PARA_INCISO.search(src, im.end(), nxt)
+                pos = nx.start() if nx else nxt
+            else:
+                pos = _item_end(src, im.start(), nxt) if im else nxt
             inserts.append((pos, _figure(figdir, pid, width, ext) + ("\n" if not im else "")))
             count += 1
     for pos, block in sorted(inserts, key=lambda t: -t[0]):

@@ -217,7 +217,7 @@ def test_split_sheets(tmp_path):
     sp = importlib.util.spec_from_file_location("split_sheets", ROOT / "scripts" / "split_sheets.py")
     mod = importlib.util.module_from_spec(sp); sp.loader.exec_module(mod)
     files = mod.build(ROOT / "tex" / "main.tex", tmp_path)
-    assert [f.name for f in files] == [f"Hoja_{n}.tex" for n in range(1, 6)]
+    assert [f.name for f in files] == [f"Hoja_{n}.tex" for n in range(1, 7)]
     for f in files:
         t = f.read_text(encoding="utf-8")
         assert "separador" not in t
@@ -227,8 +227,72 @@ def test_split_sheets(tmp_path):
     assert sum(f.read_text(encoding="utf-8").count("\\includegraphics") for f in files) == len(IDS)
 
 
+# ----------------------------------------------------------------------------- Hoja 6: series de Frobenius
+H6 = [i for i in IDS if i.startswith("h6-")]
+
+
+def test_hoja6_in_catalog_and_tex():
+    data = parse_tex(ROOT / "tex" / "main.tex")
+    h6 = next(s for s in data["sheets"] if s["n"] == 6)
+    assert [p["num"] for p in h6["problems"]] == [1, 2, 3, 4, 5, 6, 7]
+    assert H6 == ["h6-03-a", "h6-03-b", "h6-03-c", "h6-04", "h6-05-a", "h6-05-b", "h6-05-c", "h6-06", "h6-07"]
+    # los incisos escritos como párrafos («\\noindent\\textbf{(a) ...}») se convierten en lista, como los de un itemize
+    for num in (3, 5):
+        sol = next(p for p in h6["problems"] if p["num"] == num)["solution"]
+        assert sol.count("<li><strong>(") == 3
+
+
+@pytest.mark.parametrize("id_", H6)
+def test_frobenius_series_satisfy_ode(id_):
+    """Las sumas parciales de Frobenius (|x|^m · serie) cumplen la EDO a ambos lados de x=0."""
+    from edoviz.plotting import _eval, default_values
+    spec = catalog.get(id_)
+    env = {**default_values(spec), "N": 120, "C1": 0.7, "C2": -0.4}
+    x = np.array([-0.6, -0.3, 0.3, 0.6])
+    h = 1e-3
+    f = lambda xv: np.asarray(_eval(spec, spec["y"], env, x=xv), float)
+    y, y1, y2 = f(x), (f(x + h) - f(x - h)) / (2 * h), (f(x + h) - 2 * f(x) + f(x - h)) / h ** 2
+    res = _eval(spec, spec["ode"], env, x=x, y=y, y1=y1, y2=y2)
+    assert np.abs(res).max() < 1e-3 * max(1.0, np.abs(y2).max())
+
+
+def test_frobenius_coefficients_match_hand_solution():
+    from edoviz.expr import series_coeffs
+    sp = lambda i, k: series_coeffs(catalog.get(i)["series"][k], {})
+    assert np.allclose(sp("h6-03-b", 0)[:5], [1, -3, 2, -2 / 3, 1 / 7])
+    assert np.allclose(sp("h6-03-b", 1)[:4], [1, -7 / 6, 21 / 40, -11 / 80])
+    assert np.allclose(sp("h6-03-c", 0)[:5], [1, 1 / 5, 1 / 70, 1 / 1890, 1 / 83160])
+    assert np.allclose(sp("h6-03-c", 1)[:5], [1, -1, -1 / 2, -1 / 18, -1 / 360])
+    assert np.allclose(sp("h6-04", 0)[:6], [1, 1, 1 / 2, 1 / 6, 1 / 24, 1 / 120])        # a_n = 1/n!
+    assert np.allclose(sp("h6-05-a", 0)[:6], [1, 1 / 2, 1 / 20, -1 / 60, -1 / 210, -1 / 3360])
+    assert np.allclose(sp("h6-05-a", 1)[:7], [1, 1 / 2, 1 / 2, 0, -1 / 8, -3 / 80, -1 / 720])   # a_3 libre = 0
+    assert np.allclose(sp("h6-05-b", 0)[[0, 4, 8, 12]], [1, -1 / 6, 1 / 120, -1 / 5040])     # sin(x²)
+    assert np.allclose(sp("h6-05-b", 1)[[0, 4, 8, 12]], [1, -1 / 2, 1 / 24, -1 / 720])       # cos(x²)
+    assert np.allclose(sp("h6-06", 0)[:7], [1, 0, -1 / 8, 0, 1 / 192, 0, -1 / 9216])
+
+
+def test_cauchy_sum_series_problem7():
+    """Hoja 6, problema 7: la recurrencia con suma de Cauchy reproduce a1, a2, a3 del .tex."""
+    from edoviz.expr import series_coeffs
+    k, A, al, E = 0.7, 1.3, 0.4, -0.5
+    a = series_coeffs(catalog.get("h6-07")["series"][0], dict(k=k, A=A, alpha=al, E=E))
+    assert np.allclose(a[1], k * A / 2)
+    assert np.allclose(a[2], k * (k * A ** 2 - 2 * al * A - 2 * E) / 12)
+    assert np.allclose(a[3], k * A * (k ** 2 * A ** 2 - 8 * al * k * A - 8 * k * E + 6 * al ** 2) / 144)
+
+
+def test_patch_latex_puts_figures_under_paragraph_incisos(tmp_path):
+    from edoviz import patch_latex
+    out = tmp_path / "t.tex"
+    patch_latex(ROOT / "tex" / "main.tex", out)
+    t = out.read_text(encoding="utf-8")
+    pos = [t.index("figs/" + i + ".pdf") for i in ("h6-03-a", "h6-03-b", "h6-03-c")]
+    heads = [t.index(h) for h in (r"\textbf{(a) $\bm{2xy''+(3-x)y'-y=0}$", r"\textbf{(b) $\bm{2xy''+(x+1)y'+3y=0}$", r"\textbf{(c) $\bm{2x^2y''+xy'-(x+1)y=0}$")]
+    assert heads[0] < pos[0] < heads[1] < pos[1] < heads[2] < pos[2]
+
+
 def test_main_tex_has_no_web_note_and_repo_tex_folder():
     main = (ROOT / "tex" / "main.tex").read_text(encoding="utf-8")
     assert "Versión interactiva" not in main and "includegraphics" not in main and "\\newcommand{\\separador}" in main
-    assert sorted(p.name for p in (ROOT / "tex").iterdir()) == ["Hoja_1.tex", "Hoja_2.tex", "Hoja_3.tex", "Hoja_4.tex", "Hoja_5.tex", "main.tex"]
+    assert sorted(p.name for p in (ROOT / "tex").iterdir()) == ["Hoja_1.tex", "Hoja_2.tex", "Hoja_3.tex", "Hoja_4.tex", "Hoja_5.tex", "Hoja_6.tex", "main.tex"]
     assert (ROOT / "docs" / "main.pdf").stat().st_size > 50_000

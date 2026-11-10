@@ -162,7 +162,7 @@ def check_series(spec, n=40, seed=1, tol=1e-3):
     """Specs con ``series``: la suma parcial (todos los términos) cumple la EDO.
 
     Sin sympy (S(i, x, N) no es simbólico): se evalúa el residuo de la ``ode`` con derivadas por diferencias finitas
-    centrales en |x| < 0.7 (dentro del radio de convergencia de todas las series del catálogo) y constantes aleatorias.
+    centrales en 0.15 < |x| < 0.7 (dentro del radio de convergencia de todas las series del catálogo) y constantes aleatorias.
     """
     from .plotting import _eval, default_values
     rng = np.random.default_rng(seed)
@@ -176,7 +176,7 @@ def check_series(spec, n=40, seed=1, tol=1e-3):
         for c in spec["consts"]:
             if c["name"] not in ("N",) and c.get("sweep", True) and c.get("role") != "level":
                 env[c["name"]] = float(rng.uniform(c["min"], c["max"]))
-        x = rng.uniform(-0.7, 0.7, 4)
+        x = rng.uniform(0.15, 0.7, 4) * rng.choice([-1.0, 1.0], 4)      # lejos de x=0 (las series de Frobenius son singulares ahí)
         f = lambda xv: np.asarray(_eval(spec, spec["y"], env, x=xv), float)
         y, yp, ypp = f(x), (f(x + h) - f(x - h)) / (2 * h), (f(x + h) - 2 * f(x) + f(x - h)) / h ** 2
         res = np.abs(np.asarray(_eval(spec, spec["ode"], env, x=x, y=y, y1=yp, y2=ypp), float))

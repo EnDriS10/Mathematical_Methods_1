@@ -94,14 +94,18 @@
   /* Series de potencias definidas por recurrencia (equivalente a series_coeffs de expr.py).
    * series = [{init:[a0,a1..], rec:'expr en m,a1..a4 y constantes', n:120}, ...];  SER(i, x, N, K) = suma de los N primeros términos. */
   function seriesRuntime(series, constNames) {
-    const recs = series.map((sd) => compile(sd.rec, ['m', 'a1', 'a2', 'a3', 'a4'], constNames));
+    const recs = series.map((sd) => compile(sd.rec, ['m', 'a1', 'a2', 'a3', 'a4', 'c1'], constNames));
+    const convs = series.map((sd) => (sd.conv ? compile(sd.conv, [], constNames) : null));
     const memo = series.map(() => null);
     function coeffs(i, K) {
       const hit = memo[i];
       if (hit && hit.K.length === K.length && hit.K.every((v, j) => v === K[j])) return hit.c;
       const sd = series[i], n = sd.n || 120, a = Float64Array.from(sd.init.concat(new Array(Math.max(0, n - sd.init.length)).fill(0)));
+      const q = convs[i] ? convs[i](K) : null;
       for (let m = sd.init.length; m < n; m++) {
-        a[m] = recs[i](m, m >= 1 ? a[m - 1] : 0, m >= 2 ? a[m - 2] : 0, m >= 3 ? a[m - 3] : 0, m >= 4 ? a[m - 4] : 0, K);
+        let c1 = 0;
+        if (q !== null) { let t = 1; for (let j = 0; j < m; j++) { c1 += t * a[m - 1 - j]; t *= q / (j + 1); } }   // suma de Cauchy con e^{q x}
+        a[m] = recs[i](m, m >= 1 ? a[m - 1] : 0, m >= 2 ? a[m - 2] : 0, m >= 3 ? a[m - 3] : 0, m >= 4 ? a[m - 4] : 0, c1, K);
       }
       memo[i] = { K: K.slice(), c: a };
       return a;

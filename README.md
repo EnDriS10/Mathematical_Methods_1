@@ -58,7 +58,7 @@ La carpeta `tex/` tiene 6 archivos:
 | Archivo | Qué es |
 |---|---|
 | `main.tex` | Tus resoluciones de todas las hojas, **sin gráficas** (es lo que se previsualiza en la web) |
-| `Hoja_1.tex` … `Hoja_5.tex` | Una hoja por archivo, para entregar: sin `\section{Hoja N}`, con fecha, la nota del enlace a la web y las figuras |
+| `Hoja_1.tex` … `Hoja_6.tex` | Una hoja por archivo, para entregar: sin `\section{Hoja N}`, con fecha, la nota del enlace a la web y las figuras |
 
 Los `Hoja_N.tex` **se generan** a partir de `main.tex`; no se editan a mano:
 
@@ -67,7 +67,7 @@ python scripts/export_figures.py --patch   # figuras figs/*.pdf  +  tex/Hoja_N.t
 python scripts/split_sheets.py             # solo los tex/Hoja_N.tex (las figuras ya existen)
 ```
 
-`figs/` contiene un PDF vectorial por ejercicio (`figs/h1-01.pdf … h5-07.pdf`) y uno **por inciso** cuando los hay:
+`figs/` contiene un PDF vectorial por ejercicio (`figs/h1-01.pdf … h6-07.pdf`) y uno **por inciso** cuando los hay:
 `figs/h4-11-a.pdf`, `h4-11-b.pdf`… (cada uno se inserta justo debajo de su inciso). Los `Hoja_N.tex` buscan las figuras en
 `figs/` (Overleaf: sube la carpeta `figs` junto al `.tex`) o en `../figs/` (este repositorio). Las fechas de entrega y la URL de
 la web están al principio de `scripts/split_sheets.py` (`DATES`, `URL`).
@@ -89,7 +89,7 @@ campo de direcciones, soluciones singulares/particulares y **Descargar PNG**. En
 
 En las EDO de **2.º orden** el campo de direcciones se sustituye por el *campo de arcos* (en cada punto, la curvatura y″ de la solución
 con pendiente y′ fijada con un deslizador) y por el **diagrama de fases** (y, y′); en órdenes superiores no se ofrece ninguno.
-En la **Hoja 5** (series de potencias) un deslizador elige cuántos términos N de la serie se dibujan (por defecto, un número alto).
+En la **Hoja 5** (series de potencias) y la **Hoja 6** (series de Frobenius) un deslizador elige cuántos términos N de la serie se dibujan (por defecto, un número alto). En la Hoja 6 las constantes son los $a_0$ de cada solución y la gráfica vale a ambos lados de $x=0$ (prefactor $|x|^m$); en el problema 7 la recurrencia usa la suma de Cauchy del producto con $e^{-\alpha x}$.
 
 ### Vista previa del PDF en la página de inicio
 
@@ -115,17 +115,18 @@ La web quedará en `https://<tu-usuario>.github.io/<repositorio>/`. No hay que c
 
 ## Añadir una hoja (o un ejercicio) nuevo
 
-1. Escribe la resolución en `tex/main.tex` bajo `\section{Hoja 6}`, con el mismo formato (`\noindent\textbf{1. ...}` o `\noindent {\bfseries 1. ...}`).
+1. Escribe la resolución en `tex/main.tex` bajo `\section{Hoja 7}`, con el mismo formato (`\noindent\textbf{1. ...}` o `\noindent {\bfseries 1. ...}`).
 2. Añade una entrada por ejercicio en `edoviz/catalog.py`. Copia una parecida; los tipos son `level` (implícita),
    `explicit`, `param` y `ortho`:
    ```python
-   level("h6-01", "x^2*y", K("C", -5, 5, 1), [-4, 4, -4, 4], r"x^2y=C", slope="-2*y/x")
-   explicit("h6-02", "C*exp(2*x)", [K("C", -3, 3, 1)], [-2, 2, -6, 6], r"y=Ce^{2x}", slope="2*y")
+   level("h8-01", "x^2*y", K("C", -5, 5, 1), [-4, 4, -4, 4], r"x^2y=C", slope="-2*y/x")
+   explicit("h8-02", "C*exp(2*x)", [K("C", -3, 3, 1)], [-2, 2, -6, 6], r"y=Ce^{2x}", slope="2*y")
    ```
    Series de potencias (Hoja 5): `series=[{init, rec}]` define cada serie por su recurrencia y la expresión usa `S(i, x, N)`
-   (suma de los N primeros términos); mira `h5-0x` en el catálogo.
+   (suma de los N primeros términos); mira `h5-0x` en el catálogo. Series de Frobenius (Hoja 6): igual, con prefactor `abs(x)^m` en la expresión (`h6-0x`);
+   `conv: "q"` en la serie hace que `c1` sea la suma de Cauchy $\sum_j q^j/j!\,a_{n-1-j}$ (producto con $e^{qx}$).
 3. Regenera: `python scripts/export_figures.py --patch`, `python scripts/build_site.py` y `python scripts/build_pdf.py`.
-   Añade la fecha de la hoja en `DATES` de `scripts/split_sheets.py`.
+   Añade la fecha de la hoja en `DATES` de `scripts/split_sheets.py` (la Hoja 6 aún no tiene fecha: sale con `\date{}` vacío).
 
 ## Estructura
 
@@ -134,7 +135,7 @@ edoviz/            paquete Python (expr, catalog, plotting, check, export, texpa
 notebooks/         edo_graficas.ipynb (generado por scripts/make_notebook.py)
 scripts/           build_site.py · export_figures.py · split_sheets.py · build_pdf.py · make_notebook.py
 docs/              la web (GitHub Pages): index.html, main.pdf, css/, js/, data/, vendor/katex y pdfjs
-tex/  figs/        main.tex + Hoja_1..5.tex (generados) y figuras exportadas
+tex/  figs/        main.tex + Hoja_1..6.tex (generados) y figuras exportadas
 tests/             pytest
 config.json        nombre, asignatura y ruta del .tex que muestra la web
 ```

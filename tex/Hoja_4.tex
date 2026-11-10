@@ -447,34 +447,34 @@ $\boxed{y(x) = x^{-1/2}\left(C_1 \cos\left(\frac{\sqrt{11}}{2}\ln x\right) + C_2
 \end{center}
 \end{itemize}
 
-\noindent\textbf{14. Demostrad que $\bm{y''+P(x)y'+Q(x)y=0}$ se transforma en coeficientes constantes con $\bm{z(x)}$ s.o.s. $\bm{(Q'+2PQ)/Q^{3/2}}$ es constante.} \\
-Haciendo la transformación $z = z(x)$:
+\noindent\textbf{14. En el problema anterior se han transformado ciertas ecuaciones homogéneas con coeficientes variables en ecuaciones con coeficientes constantes cambiando la variable independiente. Considérese la ecuación homogénea general $\bm{y''+P(x)y'+Q(x)y=0}$ y hagamos el cambio de variable independiente de $\bm{x}$ a $\bm{z(x)}$, donde $\bm{z(x)}$ es una función no especificada de $\bm{x}$. Demostrad que la ecuación anterior puede ser transformada de este modo en una ecuación con coeficientes constantes si y sólo si $\bm{(Q'+2PQ)/Q^{3/2}}$ es constante, en cuyo caso $\bm{z=\int\sqrt{Q(x)}\,dx}$ logrará el efecto deseado.} \\
+Sea $z=z(x)$ con $z'\neq0$ (invertible). Por la regla de la cadena:
 \begin{align*}
 \frac{dy}{dx} = z' \frac{dy}{dz}, \qquad \frac{d^2y}{dx^2} = (z')^2 \frac{d^2y}{dz^2} + z'' \frac{dy}{dz}
 \end{align*}
 Sustituyendo en la EDO y dividiendo entre $(z')^2$:
 \begin{align*}
-\frac{d^2y}{dz^2} + \frac{z'' + P(x)z'}{(z')^2} \frac{dy}{dz} + \frac{Q(x)}{(z')^2} y = 0
+\frac{d^2y}{dz^2} + \underbrace{\frac{z'' + P(x)z'}{(z')^2}}_{p(x)} \frac{dy}{dz} + \underbrace{\frac{Q(x)}{(z')^2}}_{q(x)} y = 0
 \end{align*}
-Denominamos a los nuevos coef (constantes) $p = \dfrac{z'' + P(x)z'}{(z')^2}$ y $q = \dfrac{Q(x)}{(z')^2}$, de modo que la ecuación adopta la forma:
+La ecuación tiene coeficientes constantes si y sólo si $p(x)$ y $q(x)$ son constantes. Suponemos $Q>0$ en el intervalo considerado (para que $\sqrt{Q}$ y $Q^{3/2}$ sean reales y el cociente esté definido).
+
+\vspace{0.2cm}\noindent\textbf{($\Rightarrow$) Directo.} Supongamos que existe $z(x)$ con $p$ y $q$ constantes y probemos que $\dfrac{Q'+2PQ}{Q^{3/2}}$ es constante. Como $Q>0$ y $(z')^2>0$, $q=Q/(z')^2>0$ y de ahí $(z')^2=Q/q$. Tomando $z'>0$ (si $z'<0$ solo cambia el signo de la constante final): $z'=\sqrt{Q/q}$. Derivando $(z')^2=Q/q$ obtenemos $2z'z''=Q'/q$, es decir $z''=\dfrac{Q'}{2qz'}$. De la definición de $p$:
 \begin{align*}
-\frac{d^2y}{dz^2} + p\frac{dy}{dz} + qy = 0
+p\,(z')^2 = z''+Pz' \implies p\,(z')^3 = z'z''+P(z')^2 = \frac{Q'}{2q} + \frac{PQ}{q} = \frac{Q'+2PQ}{2q}
 \end{align*}
+Como $(z')^3 = Q^{3/2}/q^{3/2}$:
 \begin{align*}
-\frac{Q(x)}{(z')^2} = q \implies z'(x) = \sqrt{q Q(x)} \implies z = \int \sqrt{qQ(x)} dx
+\frac{Q'+2PQ}{Q^{3/2}} = \frac{2q\,p}{q^{3/2}} = \frac{2p}{\sqrt{q}} = \text{constante} \quad \blacksquare
 \end{align*}
-Podemos elegir sin pérdida $q= 1$
+
+\vspace{0.2cm}\noindent\textbf{($\Leftarrow$) Inverso.} Supongamos ahora $\dfrac{Q'+2PQ}{Q^{3/2}}=C$ constante y probemos que $z=\int\sqrt{Q(x)}\,dx$ transforma la ecuación en una de coeficientes constantes. Con $z'=\sqrt{Q}$:
 \begin{align*}
-Q(x) = (z')^2 \implies z'(x) = \sqrt{Q(x)} \implies z = \int \sqrt{Q(x)} dx
+q = \frac{Q}{(z')^2} = 1, \qquad z'' = \frac{Q'}{2\sqrt{Q}} \implies p = \frac{\frac{Q'}{2\sqrt{Q}} + P\sqrt{Q}}{Q} = \frac{Q'+2PQ}{2Q^{3/2}} = \frac{C}{2}
 \end{align*}
-Derivando $z'(x)$ obtenemos $z'' = \frac{Q'(x)}{2\sqrt{Q(x)}}$. Sustituyendo esto en el coeficiente $p$:
-\begin{align*}
-p = \frac{\frac{Q'(x)}{2\sqrt{Q(x)}} + P(x)\sqrt{Q(x)}}{Q(x)} = \frac{Q'(x) + 2P(x)Q(x)}{2[Q(x)]^{3/2}}
-\end{align*}
-\begin{align*}
-\frac{Q'(x) + 2P(x)Q(x)}{[Q(x)]^{3/2}} = C \quad (\text{constante})
-\end{align*}
-Quedando finalmente reducida a $\frac{d^2y}{dz^2} + C \frac{dy}{dz} + y = 0$. \qquad $\blacksquare$ \\
+Ambos son constantes y la ecuación queda
+\[
+\frac{d^2y}{dz^2} + \frac{C}{2}\frac{dy}{dz} + y = 0 \quad \blacksquare
+\]
 
 \noindent\textbf{15. Usad el resultado del problema anterior y resolved cuando sea posible:}
 

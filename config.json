@@ -7,6 +7,7 @@
     "2": "EDOs de primer orden: exactas, lineales, Bernoulli y ecuaciones integrales.",
     "3": "EDOs exactas, no resueltas en y′ (Lagrange, Clairaut), Riccati, EDO de una familia de curvas y trayectorias ortogonales.",
     "4": "EDOs lineales de segundo orden: Wronskiano, coeficientes constantes, Euler, coeficientes indeterminados y variación de parámetros.",
-    "5": "Series de potencias: recurrencias de dos y tres términos, ecuaciones de Airy, Chebyshev y Hermite, y EDO no homogéneas."
+    "5": "Series de potencias: recurrencias de dos y tres términos, ecuaciones de Airy, Chebyshev y Hermite, y EDO no homogéneas.",
+    "6": "Series de Frobenius: puntos singulares regulares e irregulares, ecuación indicial, recurrencias, raíz doble, función de Bessel y suma de Cauchy."
   }
 }

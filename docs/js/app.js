@@ -77,7 +77,7 @@
     if (opts.strong) { path(fam.sel); ctx.strokeStyle = cssVar('--plot-bg'); ctx.lineWidth = opts.strong + 3.5; ctx.stroke(); ctx.strokeStyle = cssVar('--c-family'); ctx.lineWidth = opts.strong; ctx.stroke(); }
     ctx.restore();
   }
-  const THUMBS = { 1: 'h1-12', 2: 'h2-11', 3: 'h3-10', 4: 'h4-11-j', 5: 'h5-02' };
+  const THUMBS = { 1: 'h1-12', 2: 'h2-11', 3: 'h3-10', 4: 'h4-11-j', 5: 'h5-02', 6: 'h6-06' };
   let homeCleanup = null;
 
   /* ---------- vista previa del PDF con las resoluciones (docs/main.pdf, generado con scripts/build_pdf.py) ---------- */
