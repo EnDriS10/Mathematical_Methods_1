@@ -618,20 +618,21 @@ explicit("h6-05-b", "C1*abs(x)^2*S(0,x,N)+C2*S(1,x,N)", _c() + [_N(120, 150)], [
 
 # 5 · (c) 2x²y'' + (3x-x²)y' - (x+1)y = 0   m=1/2: n(2n+3)a_n = (2n+1)/2 a_{n-1};   m=-1: y2 = 1/x (un solo término)
 explicit("h6-05-c", "C1*abs(x)^0.5*S(0,x,N)+C2/x", _c(l2="C₂  (y₂ = C₂/x)") + [_N(60, 120)], [-5, 5, -5, 5],
-         r"y=C_1y_1(x)+C_2\,\frac1x", ode="2*x^2*y2+(3*x-x^2)*y1-(x+1)*y", particular=_P6(),
+         r"y=C_1y_1(x)+C_2y_2(x),\ \ y_2=\frac{a_0}{x}", ode="2*x^2*y2+(3*x-x^2)*y1-(x+1)*y", particular=_P6(),
          series=[_ser([1], "(2*m+1)*a1/(2*m*(2*m+3))")])
 
 # 6 · Bessel p=1: x²y'' + xy' + (x²-1)y = 0   m=1: n(n+2)a_n = -a_{n-2}   (y = a_0·2J_1(x))
 explicit("h6-06", "C1*x*S(0,x,N)", [K("C1", -2, 2, 0.5, n=9, label="a₀"), _N(120, 130)], [-14, 14, -1.2, 1.2],
-         r"y=a_0\,x\sum_k\frac{(-1)^k}{4^kk!(k+1)!}x^{2k}=2a_0J_1(x)", ode="x^2*y2+x*y1+(x^2-1)*y",
+         r"y_1(x)=a_0\left(x-\frac{x^3}{8}+\frac{x^5}{192}-\dots\right)", ode="x^2*y2+x*y1+(x^2-1)*y",
          particular=dict(values={"C1": 0.5}, label="a₀=½  (J₁)"), series=[_ser([1, 0], "-a2/(m*(m+2))")])
 
 # 7 · y'' + k(E - A e^{-αx}/x) y = 0   m=1:  n(n+1)a_n = kA·Σ_j (-α)^j/j!·a_{n-1-j} - kE·a_{n-2}   (suma de Cauchy)
 explicit("h6-07", "C1*abs(x)*S(0,x,N)",
-         [K("C1", -2, 2, 1, n=7, label="a₀"),
-          K("k", 0.2, 3, 1, sweep=False, step=0.05, label="k"), K("A", -3, 3, 1.5, sweep=False, step=0.1, label="A"),
-          K("alpha", -2, 2, 0.5, sweep=False, step=0.05, label="α"), K("E", -3, 3, 1, sweep=False, step=0.1, label="E"), _N(80, 120)],
-         [-5, 5, -5, 5], r"y=a_0\,|x|\left[1+\frac{kA}{2}x+\dots\right]", ode="y2+k*(E-A*exp(-alpha*x)/x)*y",
+         [K("C1", -2, 2, 1, n=7, sweep=False, label="a₀"),
+          K("k", 0.2, 3, 1, n=3, step=0.05, label="k"), K("A", -3, 3, 1.5, n=3, step=0.1, label="A"),
+          K("alpha", -2, 2, 0.5, n=3, step=0.05, label="α"), K("E", -3, 3, 1, n=3, step=0.1, label="E"), _N(80, 120)],
+         [-5, 5, -5, 5], r"y(x)=a_0\,|x|\left[1+\frac{kA}{2}x+\frac{k(kA^2-2\alpha A-2E)}{12}x^2+\dots\right]",
+         ode="y2+k*(E-A*exp(-alpha*x)/x)*y",
          particular=dict(values={"C1": 1}, label="a₀=1"),
          series=[_ser([1], "(k*A*c1-k*E*a2)/(m*(m+1))", conv="-alpha")])
 

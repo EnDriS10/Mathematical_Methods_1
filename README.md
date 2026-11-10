@@ -126,7 +126,7 @@ La web quedará en `https://<tu-usuario>.github.io/<repositorio>/`. No hay que c
    (suma de los N primeros términos); mira `h5-0x` en el catálogo. Series de Frobenius (Hoja 6): igual, con prefactor `abs(x)^m` en la expresión (`h6-0x`);
    `conv: "q"` en la serie hace que `c1` sea la suma de Cauchy $\sum_j q^j/j!\,a_{n-1-j}$ (producto con $e^{qx}$).
 3. Regenera: `python scripts/export_figures.py --patch`, `python scripts/build_site.py` y `python scripts/build_pdf.py`.
-   Añade la fecha de la hoja en `DATES` de `scripts/split_sheets.py` (la Hoja 6 aún no tiene fecha: sale con `\date{}` vacío).
+   Añade la fecha de la hoja en `DATES` de `scripts/split_sheets.py`.
 
 ## Estructura
 

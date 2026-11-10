@@ -103,7 +103,8 @@ def to_html(src: str) -> str:
     s = re.sub(r"\$\\bm\{\$(.*?)\$\}", lambda m: "$\\bm{" + m.group(1) + "}$", s)    # «$\bm{$f(x)$}» mal anidado
     s = re.sub(r"\\begin\{tikzpicture\}.*?\\end\{tikzpicture\}", "\x00TRI\x00", s, flags=re.S)
     s, store = _protect_math(s)
-    s = re.sub(r"\\(?:noindent|separador|quad|qquad)\b", " ", s)
+    s = re.sub(r"\\(?:noindent|separador|quad|qquad|smallskip|medskip|bigskip)\b", " ", s)
+    s = re.sub(r"(?<!\\)\\ ", " ", s)                               # «\ » (espacio de control)
     s = re.sub(r"\\vspace\{[^}]*\}", "", s)
     s = s.replace("\\checkmark", "✓")
     for cmd, tag in (("textit", "em"), ("emph", "em"), ("textbf", "strong")):

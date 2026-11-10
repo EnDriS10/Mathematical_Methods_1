@@ -22,7 +22,7 @@ from edoviz.export import patch_latex  # noqa: E402
 URL = "https://endris10.github.io/Mathematical_Methods_1/"
 # fecha de entrega de cada hoja (aparece bajo el título de su Hoja_N.tex; main.tex no lleva fecha)
 DATES = {1: "10 de septiembre de 2026", 2: "28 de septiembre de 2026", 3: "8 de octubre de 2026",
-         4: "22 de octubre de 2026", 5: "6 de noviembre de 2026"}
+         4: "22 de octubre de 2026", 5: "6 de noviembre de 2026", 6: "10 de noviembre de 2026"}
 NOTE = r"""
 \begin{center}
 \fbox{\parbox{0.93\linewidth}{\small
