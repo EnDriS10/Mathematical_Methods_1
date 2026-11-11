@@ -11,9 +11,14 @@
   const MATH = { delimiters: [{ left: '\\[', right: '\\]', display: true }, { left: '\\(', right: '\\)', display: false }], throwOnError: false, strict: 'ignore' };
   const renderMath = (node) => window.renderMathInElement && window.renderMathInElement(node, MATH);
 
-  let sheets = [], catalog = {}, site = {}, current = null, observer = null;
+  let sheets = [], catalog = {}, site = {}, current = null, observer = null, mathJob = null, flushMath = null;
+  window.addEventListener('beforeprint', () => { if (flushMath) flushMath(); });
 
   async function init() {
+    const btn = $('#tema');
+    const label = () => { btn.textContent = effectiveTheme() === 'dark' ? 'Tema claro' : 'Tema oscuro'; btn.setAttribute('aria-label', btn.textContent); };
+    btn.addEventListener('click', () => { const t = effectiveTheme() === 'dark' ? 'light' : 'dark'; document.documentElement.dataset.theme = t; try { localStorage.setItem('tema', t); } catch (e) {} label(); });
+    label();
     const [s, c] = await Promise.all([fetch('data/sheets.json').then((r) => r.json()), fetch('data/catalog.json').then((r) => r.json())]);
     sheets = s.sheets; catalog = c; site = s.site;
     $('#autor').textContent = s.site.name; $('#asignatura').textContent = s.site.course;
@@ -21,10 +26,6 @@
     buildTabs();
     window.addEventListener('hashchange', route);
     route();
-    const btn = $('#tema');
-    const label = () => { btn.textContent = effectiveTheme() === 'dark' ? 'Tema claro' : 'Tema oscuro'; };
-    btn.addEventListener('click', () => { const t = effectiveTheme() === 'dark' ? 'light' : 'dark'; document.documentElement.dataset.theme = t; try { localStorage.setItem('tema', t); } catch (e) {} label(); });
-    label();
   }
   const effectiveTheme = () => document.documentElement.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
 
@@ -60,22 +61,33 @@
       for (const f of fns) { const r = eng.sampleExplicit(f, valid, K, X0); out.push(...eng.splitCurve(r.X, r.Y, view)); } return out; };
     return { view, family: eng.sweepValues(Object.assign({}, c, { n })).map(make), sel: make(c.value) };
   }
-  function paint(canvas, fam, opts) {
-    opts = opts || {};
-    const dpr = window.devicePixelRatio || 1, W = canvas.clientWidth, H = canvas.clientHeight;
-    if (!W || !H) return;
-    canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
-    const ctx = canvas.getContext('2d'), v = fam.view;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
+  /* dibuja la familia completa en un lienzo (aparte) y lo reutiliza: la animación del inicio solo recorta ese dibujo en cada fotograma */
+  function raster(ctx, W, H, fam, opts, colFam, colBg) {
+    const v = fam.view;
     const X = (x) => (x - v.x0) / (v.x1 - v.x0) * W, Y = (y) => (1 - (y - v.y0) / (v.y1 - v.y0)) * H;
     const path = (lines) => { ctx.beginPath(); for (const ln of lines) { ctx.moveTo(X(ln[0]), Y(ln[1])); for (let i = 2; i < ln.length; i += 2) ctx.lineTo(X(ln[i]), Y(ln[i + 1])); } };
-    const reveal = opts.reveal == null ? 1 : opts.reveal;
-    ctx.save(); ctx.beginPath(); ctx.rect(0, 0, W * reveal, H); ctx.clip();
     ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-    path([].concat(...fam.family)); ctx.strokeStyle = cssVar('--c-family'); ctx.globalAlpha = opts.alpha || .38; ctx.lineWidth = opts.lw || 1.1; ctx.stroke();
+    path([].concat(...fam.family)); ctx.strokeStyle = colFam; ctx.globalAlpha = opts.alpha || .38; ctx.lineWidth = opts.lw || 1.1; ctx.stroke();
     ctx.globalAlpha = 1;
-    if (opts.strong) { path(fam.sel); ctx.strokeStyle = cssVar('--plot-bg'); ctx.lineWidth = opts.strong + 3.5; ctx.stroke(); ctx.strokeStyle = cssVar('--c-family'); ctx.lineWidth = opts.strong; ctx.stroke(); }
-    ctx.restore();
+    if (opts.strong) { path(fam.sel); ctx.strokeStyle = colBg; ctx.lineWidth = opts.strong + 3.5; ctx.stroke(); ctx.strokeStyle = colFam; ctx.lineWidth = opts.strong; ctx.stroke(); }
+  }
+  function paint(canvas, fam, opts) {
+    opts = opts || {};
+    const dpr = Math.min(window.devicePixelRatio || 1, 2), W = canvas.clientWidth, H = canvas.clientHeight;
+    if (!W || !H) return;
+    const pw = Math.round(W * dpr), ph = Math.round(H * dpr);
+    if (canvas.width !== pw || canvas.height !== ph) { canvas.width = pw; canvas.height = ph; canvas._key = null; }
+    const colFam = cssVar('--c-family'), colBg = cssVar('--plot-bg'), key = [pw, ph, colFam, colBg, fam.sel.length, fam.family.length].join('|');
+    if (canvas._key !== key) {
+      const buf = canvas._buf || (canvas._buf = document.createElement('canvas'));
+      buf.width = pw; buf.height = ph;
+      const bc = buf.getContext('2d'); bc.setTransform(dpr, 0, 0, dpr, 0, 0);
+      raster(bc, W, H, fam, opts, colFam, colBg); canvas._key = key;
+    }
+    const ctx = canvas.getContext('2d'), reveal = opts.reveal == null ? 1 : opts.reveal;
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, pw, ph);
+    const cw = Math.max(1, Math.round(pw * reveal));
+    ctx.drawImage(canvas._buf, 0, 0, cw, ph, 0, 0, cw, ph);
   }
   const THUMBS = { 1: 'h1-12', 2: 'h2-11', 3: 'h3-10', 4: 'h4-11-j', 5: 'h5-02', 6: 'h6-06' };
   let homeCleanup = null;
@@ -137,7 +149,7 @@
     if (observer) observer.disconnect();
     if (homeCleanup) homeCleanup();
     document.body.classList.add('is-home');
-    const main = $('#hoja');
+    const main = $('#hoja'); mathJob = null; flushMath = null;
     $('.layout').classList.add('home');
     $('#indice').replaceChildren();
     const done = sheets.filter((s) => s.problems.length), total = sheets.reduce((n, s) => n + s.problems.length, 0);
@@ -154,7 +166,7 @@
       const tid = THUMBS[sh.n] || (sh.problems.find((p) => catalog[p.id] && catalog[p.id].kind === 'explicit') || {}).id;
       const cv = n && tid && catalog[tid] ? el('canvas', { class: 'thumb', 'aria-hidden': 'true' }) : el('div', { class: 'thumb blank', 'aria-hidden': 'true' });
       if (cv.tagName === 'CANVAS') thumbs.push([cv, catalog[tid]]);
-      return el('a', { class: 'card' + (n ? '' : ' soon'), href: '#hoja-' + sh.n, 'aria-label': sh.title + (n ? ', ' + n + ' ejercicios' : ', próximamente') },
+      return el('a', { class: 'card' + (n ? '' : ' soon'), href: '#hoja-' + sh.n, },
         cv,
         el('span', { class: 'card-body' },
           el('span', { class: 'card-title' }, sh.title),
@@ -300,7 +312,13 @@
     const lazy = [];
     main.append(el('header', { class: 'sheet-head' }, el('h2', {}, sheet.title), sheet.desc ? el('p', {}, sheet.desc) : ''));
     for (const p of sheet.problems) main.append(buildProblem(sheet, p, lazy));
-    renderMath(main);
+    /* las fórmulas se renderizan por ejercicio y en trozos (así el navegador no se bloquea al abrir una hoja larga) */
+    const hm = /^#hoja-\d+\/(\d+)/.exec(location.hash), first = hm ? 'p-' + sheet.n + '-' + hm[1] : null;
+    const queue = [...main.querySelectorAll('.sheet-head, .problem')].sort((a, b) => (b.id === first) - (a.id === first));
+    const mathToken = (mathJob = {}); let qi = 0;
+    const pump = () => { if (mathJob !== mathToken) return; const t0 = performance.now(); while (qi < queue.length && (qi < 2 || performance.now() - t0 < 12)) renderMath(queue[qi++]); if (qi < queue.length) setTimeout(pump, 0); };
+    flushMath = () => { while (qi < queue.length) renderMath(queue[qi++]); };
+    pump();
     observer = new IntersectionObserver((entries) => {
       for (const e of entries) if (e.isIntersecting) {
         const item = lazy.find((l) => l.host === e.target); if (!item || item.ready) continue;

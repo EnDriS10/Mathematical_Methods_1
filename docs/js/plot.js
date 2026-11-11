@@ -92,6 +92,7 @@
     }
 
     destroy() {
+      this.animate(null);
       if (this.zoomed) this.toggleZoom(false);
       if (this.ph) { this.ph.replaceWith(this.root); this.ph = null; }
       if (this._ro) this._ro.disconnect();
@@ -182,7 +183,7 @@
       const actions = el('div', { class: 'actions' });
       if (s.particular && s.particular.values) actions.append(el('button', { type: 'button', onclick: () => this.setValues(s.particular.values) }, 'Ir a la particular'));
       actions.append(
-        el('button', { type: 'button', onclick: () => { s.consts.forEach((c) => (this.env[c.name] = c.value)); this.syncSliders(); this.resetView(); this.draw(); } }, 'Restablecer'),
+        el('button', { type: 'button', onclick: () => { this.animate(null); s.consts.forEach((c) => (this.env[c.name] = c.value)); this.syncSliders(); this.resetView(); this.draw(); } }, 'Restablecer'),
         el('button', { type: 'button', onclick: () => this.download() }, 'Descargar PNG'));
       const hint = this.canPick() ? el('p', { class: 'hint' }, 'Toca o haz clic en el gráfico para elegir la curva que pasa por ese punto. Rueda o pellizco para ampliar, arrastra para mover.')
                                  : el('p', { class: 'hint' }, 'Rueda o pellizco para ampliar, arrastra para mover.');
@@ -202,7 +203,42 @@
       range.addEventListener('input', () => { num.value = fmt(+range.value); set(+range.value); });
       num.addEventListener('input', () => { range.value = num.value; set(+num.value); });
       this.sliders[c.name] = { range, num };
-      return el('div', { class: 'row' }, el('label', { for: id, class: 'name' }, c.label || c.name), range, num);
+      const row = el('div', { class: 'row' }, el('label', { for: id, class: 'name' }, c.label || c.name), range, num);
+      if (c.name !== '__p') {
+        const play = el('button', { type: 'button', class: 'play', title: 'Animar ' + (c.label || c.name), 'aria-label': 'Animar ' + (c.label || c.name), 'aria-pressed': 'false' }, '▶');
+        play.addEventListener('click', () => this.animate(play.getAttribute('aria-pressed') === 'true' ? null : c, play));
+        range.addEventListener('pointerdown', () => this.animate(null));
+        num.addEventListener('focus', () => this.animate(null));
+        this.sliders[c.name].play = play;
+        row.append(play);
+      }
+      return row;
+    }
+    /* reproduce una constante: va y vuelve entre su mínimo y su máximo (el nº de términos, entero, avanza de 1 en 1 y vuelve a empezar) */
+    animate(c, btn) {
+      if (this._anim) {
+        cancelAnimationFrame(this._anim.raf);
+        const b = this._anim.btn; b.textContent = '▶'; b.setAttribute('aria-pressed', 'false'); b.classList.remove('on');
+        this._anim = null;
+      }
+      if (!c || this._dead) return;
+      btn.textContent = '❚❚'; btn.setAttribute('aria-pressed', 'true'); btn.classList.add('on');
+      const lo = c.min, hi = c.max, T = c.integer ? Math.min(14000, Math.max(5000, (hi - lo) * 90)) : 6000;
+      const start = this.env[c.name], span = hi - lo;
+      let t0 = null, ph0 = span > 0 ? (start - lo) / span / (c.integer ? 1 : 2) : 0;
+      const a = this._anim = { btn, raf: 0 };
+      const step = (now) => {
+        if (this._anim !== a || this._dead) return;
+        if (t0 === null) t0 = now;
+        const u = ph0 + (now - t0) / T;
+        const f = c.integer ? u % 1 : 1 - Math.abs(2 * (u % 1) - 1);         /* triángulo 0→1→0 */
+        let v = lo + span * f;
+        if (c.integer) v = Math.round(v); else if (c.step) v = Math.round(v / c.step) * c.step;
+        this.env[c.name] = v; this.sliders[c.name].range.value = v; this.sliders[c.name].num.value = fmt(v);
+        this.draw();
+        a.raf = requestAnimationFrame(step);
+      };
+      a.raf = requestAnimationFrame(step);
     }
     /* sin curva elegida no hay constantes que mover: se ocultan sus controles (los parámetros fijos se quedan) */
     syncControls() {
