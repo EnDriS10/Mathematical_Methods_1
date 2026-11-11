@@ -184,8 +184,8 @@
       actions.append(
         el('button', { type: 'button', onclick: () => { s.consts.forEach((c) => (this.env[c.name] = c.value)); this.syncSliders(); this.resetView(); this.draw(); } }, 'Restablecer'),
         el('button', { type: 'button', onclick: () => this.download() }, 'Descargar PNG'));
-      const hint = this.canPick() ? el('p', { class: 'hint' }, 'Toca o haz clic en el gráfico para elegir la curva que pasa por ese punto. Rueda para ampliar, arrastra para mover.')
-                                 : el('p', { class: 'hint' }, 'Rueda para ampliar, arrastra para mover.');
+      const hint = this.canPick() ? el('p', { class: 'hint' }, 'Toca o haz clic en el gráfico para elegir la curva que pasa por ese punto. Rueda o pellizco para ampliar, arrastra para mover.')
+                                 : el('p', { class: 'hint' }, 'Rueda o pellizco para ampliar, arrastra para mover.');
       this.hintEl = hint; this.hint0 = hint.textContent;
       /* deslizador de la pendiente y' = p del campo de 2.º orden */
       this.pRow = null;
@@ -418,7 +418,7 @@
       if (this.pRow) this.pRow.hidden = !(this.opts.field && !on);
       if (on !== this.phase) {
         this.phase = on; this.cache = {}; this.resetView();
-        this.hintEl.textContent = on ? 'Plano de fases: horizontal y, vertical y′. Las flechas marcan el sentido en que crece x. Rueda para ampliar, arrastra para mover.' : this.hint0;
+        this.hintEl.textContent = on ? 'Plano de fases: horizontal y, vertical y′. Las flechas marcan el sentido en que crece x. Rueda o pellizco para ampliar, arrastra para mover.' : this.hint0;
       }
     }
     deriv(f, x, K) { const h = (this.spec.window[1] - this.spec.window[0]) * 1e-6; return (f(x + h, K) - f(x - h, K)) / (2 * h); }
@@ -637,10 +637,29 @@
     bindPointer() {
       const cv = this.canvas; let drag = null; const pts = new Map();
       const pos = (e) => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
-      cv.style.touchAction = 'pan-y pinch-zoom';
-      cv.addEventListener('pointerdown', (e) => { cv.setPointerCapture(e.pointerId); const [px, py] = pos(e); drag = { px, py, v: Object.assign({}, this.view), moved: false }; });
+      cv.style.touchAction = 'pan-y';           /* un dedo en vertical desplaza la página; el pellizco lo gestiona la gráfica */
+      let pinch = null;
+      const startPinch = () => {
+        const [a, b] = [...pts.values()], mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2, v = Object.assign({}, this.view);
+        pinch = { d0: Math.max(10, Math.hypot(a[0] - b[0], a[1] - b[1])), v, xm: v.x0 + mx / this.cssW * (v.x1 - v.x0), ym: v.y0 + (1 - my / this.cssH) * (v.y1 - v.y0) };
+      };
+      const movePinch = () => {
+        const [a, b] = [...pts.values()], mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+        const f = Math.min(40, Math.max(0.025, pinch.d0 / Math.max(10, Math.hypot(a[0] - b[0], a[1] - b[1])))), v = pinch.v;
+        const w = (v.x1 - v.x0) * f, h = (v.y1 - v.y0) * f;
+        const x0 = pinch.xm - mx / this.cssW * w, y0 = pinch.ym - (1 - my / this.cssH) * h;
+        this.view = { x0, x1: x0 + w, y0, y1: y0 + h }; this.draw();
+      };
+      cv.addEventListener('touchmove', (e) => { if (e.touches.length > 1 && e.cancelable) e.preventDefault(); }, { passive: false });
+      cv.addEventListener('pointerdown', (e) => {
+        try { cv.setPointerCapture(e.pointerId); } catch (_) {} const [px, py] = pos(e); pts.set(e.pointerId, [px, py]);
+        if (pts.size === 2) { drag = null; startPinch(); return; }
+        if (pts.size === 1) drag = { px, py, v: Object.assign({}, this.view), moved: false };
+      });
       cv.addEventListener('pointermove', (e) => {
         const [px, py] = pos(e);
+        if (pts.has(e.pointerId)) pts.set(e.pointerId, [px, py]);
+        if (pinch && pts.size === 2) { movePinch(); return; }
         this.readout.textContent = this.phase ? 'y = ' + fmt(this.ux(px)) + '   y′ = ' + fmt(this.uy(py)) : 'x = ' + fmt(this.ux(px)) + '   y = ' + fmt(this.uy(py)); this.readout.style.opacity = 1;
         if (!drag) return;
         const dx = px - drag.px, dy = py - drag.py;
@@ -650,9 +669,15 @@
           this.view = { x0: drag.v.x0 - dx * wx, x1: drag.v.x1 - dx * wx, y0: drag.v.y0 + dy * wy, y1: drag.v.y1 + dy * wy }; this.draw();
         }
       });
-      cv.addEventListener('pointerup', (e) => { if (drag && !drag.moved) { const [px, py] = pos(e); this.pick(this.ux(px), this.uy(py)); } drag = null; });
+      const endPtr = (e, pick) => {
+        const was = pts.size; pts.delete(e.pointerId);
+        if (pinch) { if (pts.size < 2) pinch = null; drag = null; if (pts.size === 1) { const [q] = [...pts.values()]; drag = { px: q[0], py: q[1], v: Object.assign({}, this.view), moved: true }; } return; }
+        if (pick && drag && !drag.moved && was === 1) { const [px, py] = pos(e); this.pick(this.ux(px), this.uy(py)); }
+        drag = null;
+      };
+      cv.addEventListener('pointerup', (e) => endPtr(e, true));
       cv.addEventListener('pointerleave', () => { this.readout.style.opacity = 0; });
-      cv.addEventListener('pointercancel', () => { drag = null; });
+      cv.addEventListener('pointercancel', (e) => endPtr(e, false));
       cv.addEventListener('wheel', (e) => {
         e.preventDefault(); const [px, py] = pos(e), f = Math.exp(Math.sign(e.deltaY) * 0.15), x = this.ux(px), y = this.uy(py), v = this.view;
         this.view = { x0: x - (x - v.x0) * f, x1: x + (v.x1 - x) * f, y0: y - (y - v.y0) * f, y1: y + (v.y1 - y) * f }; this.draw();
