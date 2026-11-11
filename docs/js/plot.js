@@ -27,6 +27,11 @@
     return n;
   };
 
+  const ZOOM_ICON = {
+    open: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></svg>',
+    close: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10h-6V4M4 14h6v6M14 10l7-7M3 21l7-7"/></svg>'
+  };
+
   class EdoPlot {
     constructor(root, spec) {
       this.spec = spec;
@@ -44,15 +49,52 @@
       this.draw();
       this._ro = new ResizeObserver(() => { this.resize(); this.draw(); });
       this._ro.observe(this.stage);
+      this._wr = () => { if (this.zoomed) { this.resize(); this.draw(); } };
+      window.addEventListener('resize', this._wr);
       this._mo = new MutationObserver(() => this.draw());
       this._mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
       matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (!this._dead) this.draw(); });
     }
 
     /* libera observadores y vacía el contenedor (al cambiar de inciso) */
+    /* ampliar: el bloque entero (gráfica + constantes) pasa a una ventana flotante; clic fuera, Esc o el mismo botón la cierran */
+    toggleZoom(force) {
+      const on = force === undefined ? !this.zoomed : !!force;
+      if (on === !!this.zoomed || this._dead) return;
+      const root = this.root;
+      if (on) {
+        this.ph = el('div', { class: 'zoom-ph', style: 'height:' + root.offsetHeight + 'px' });
+        root.before(this.ph);
+        document.body.append(root);                 /* fuera de cualquier contexto de apilado de la página */
+        this.backdrop = el('div', { class: 'zoom-backdrop' });
+        this.backdrop.addEventListener('pointerdown', () => this.toggleZoom(false));
+        root.before(this.backdrop);
+        this._esc = (e) => { if (e.key === 'Escape') this.toggleZoom(false); };
+        document.addEventListener('keydown', this._esc);
+        document.body.classList.add('zoom-lock');
+        root.classList.add('zoomed');
+      } else {
+        root.classList.remove('zoomed');
+        document.body.classList.remove('zoom-lock');
+        document.removeEventListener('keydown', this._esc);
+        if (this.backdrop) this.backdrop.remove();
+        if (this.ph) this.ph.replaceWith(root);
+        this.backdrop = this.ph = null;
+      }
+      this.zoomed = on;
+      this.zoomBtn.innerHTML = on ? ZOOM_ICON.close : ZOOM_ICON.open;
+      const t = on ? 'Cerrar ampliación' : 'Ampliar gráfica';
+      this.zoomBtn.title = t; this.zoomBtn.setAttribute('aria-label', t); this.zoomBtn.setAttribute('aria-pressed', String(on));
+      this.resetView(); this.resize(); this.draw();
+      if (on) this.zoomBtn.focus({ preventScroll: true });
+    }
+
     destroy() {
+      if (this.zoomed) this.toggleZoom(false);
+      if (this.ph) { this.ph.replaceWith(this.root); this.ph = null; }
       if (this._ro) this._ro.disconnect();
       if (this._mo) this._mo.disconnect();
+      if (this._wr) window.removeEventListener('resize', this._wr);
       if (this._raf) cancelAnimationFrame(this._raf);
       this._dead = true;
       this.root.replaceChildren(); this.root.classList.remove('edo-plot');
@@ -112,7 +154,10 @@
       this.stage = el('div', { class: 'stage' });
       this.canvas = el('canvas', { class: 'cv', role: 'img', 'aria-label': 'Gráfico de la familia de soluciones' });
       this.readout = el('div', { class: 'readout', 'aria-hidden': 'true' });
-      this.stage.append(this.canvas, this.readout);
+      this.zoomBtn = el('button', { type: 'button', class: 'zoom-btn', title: 'Ampliar gráfica', 'aria-label': 'Ampliar gráfica', 'aria-pressed': 'false' });
+      this.zoomBtn.innerHTML = ZOOM_ICON.open;
+      this.zoomBtn.addEventListener('click', (e) => { e.stopPropagation(); this.toggleZoom(); });
+      this.stage.append(this.canvas, this.readout, this.zoomBtn);
       this.legend = el('ul', { class: 'legend' });
       this.controls = el('div', { class: 'controls' });
       const tools = el('div', { class: 'tools' });
@@ -174,6 +219,7 @@
       const win = this.spec.window, ratio = (win[3] - win[2]) / (win[1] - win[0]);
       const r = this.spec.aspect === 'equal' ? Math.min(1.05, Math.max(0.6, ratio)) : (w < 520 ? 0.92 : 0.72);
       this.cssW = w; this.cssH = Math.round(w * r);
+      if (this.zoomed) this.cssH = Math.max(220, Math.round(Math.min(this.cssH, window.innerHeight * (window.innerWidth >= 900 ? 0.84 : 0.5))));
       const dpr = window.devicePixelRatio || 1;
       this.canvas.width = Math.round(this.cssW * dpr); this.canvas.height = Math.round(this.cssH * dpr);
       this.canvas.style.height = this.cssH + 'px';
