@@ -72,6 +72,7 @@
         this._esc = (e) => { if (e.key === 'Escape') this.toggleZoom(false); };
         document.addEventListener('keydown', this._esc);
         document.body.classList.add('zoom-lock');
+        this._opener = document.activeElement;
         root.classList.add('zoomed');
       } else {
         root.classList.remove('zoomed');
@@ -80,6 +81,7 @@
         if (this.backdrop) this.backdrop.remove();
         if (this.ph) this.ph.replaceWith(root);
         this.backdrop = this.ph = null;
+        if (this._opener && this._opener.isConnected && this._opener.focus) this._opener.focus({ preventScroll: true });
       }
       this.zoomed = on;
       this.zoomBtn.innerHTML = on ? ZOOM_ICON.close : ZOOM_ICON.open;

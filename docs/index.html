@@ -7,6 +7,10 @@
   <meta name="theme-color" content="#11151d" media="(prefers-color-scheme: dark)">
   <title>César Acosta · Métodos Matemáticos I</title>
   <meta name="description" content="Hojas de problemas de ecuaciones diferenciales ordinarias: resolución y gráficas interactivas de las familias de soluciones.">
+  <meta property="og:title" content="César Acosta · Métodos Matemáticos I">
+  <meta property="og:description" content="Hojas de problemas de EDO resueltas, con gráficas interactivas de las familias de soluciones.">
+  <meta property="og:type" content="website">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232a78d6'/%3E%3Cpath d='M4 24C10 24 11 8 16 8s6 16 12 16' fill='none' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="vendor/katex/katex.min.css">
   <link rel="stylesheet" href="css/style.css">
   <script>try{var t=localStorage.getItem('tema');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
@@ -26,13 +30,22 @@
     <main id="hoja" tabindex="-1"></main>
   </div>
   <footer class="site-foot">
-    <p>César Endris · resoluciones de las lecturas y los problemas de Juan Terron Cuadrado</p>
-    <p class="ai">Hecho con la ayuda de Claude (IA de Anthropic)</p>
+    <p>© César Endris · Resolución con lecturas y problemas de Juan Terrón Cuadrado.</p>
+    <p class="ai">Desarrollado con Claude (Anthropic).</p>
   </footer>
+  <button id="top" class="to-top" type="button" aria-label="Volver arriba" title="Volver arriba" hidden>↑</button>
   <script src="vendor/katex/katex.min.js"></script>
   <script src="vendor/katex/auto-render.min.js"></script>
   <script src="js/engine.js"></script>
   <script src="js/plot.js"></script>
   <script src="js/app.js"></script>
+  <script>
+    (function () {
+      var b = document.getElementById('top');
+      function upd() { b.hidden = window.scrollY < 900; }
+      window.addEventListener('scroll', upd, { passive: true }); upd();
+      b.addEventListener('click', function () { window.scrollTo({ top: 0, behavior: 'smooth' }); });
+    })();
+  </script>
 </body>
 </html>

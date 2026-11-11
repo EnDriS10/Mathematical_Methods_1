@@ -230,3 +230,14 @@ body.zoom-lock { overflow: hidden; }
 
 .site-foot { max-width: 1280px; margin: 2.5rem auto 0; padding: 1.4rem 1.5rem calc(2rem + env(safe-area-inset-bottom)); border-top: 1px solid var(--rule); text-align: center; font: .88rem/1.6 var(--sans); color: var(--muted); }
 .site-foot p { margin: 0; } .site-foot .ai { font-size: .8rem; opacity: .85; }
+
+.to-top { position: fixed; right: max(1rem, env(safe-area-inset-right)); bottom: max(1rem, env(safe-area-inset-bottom)); z-index: 30; width: 2.8rem; height: 2.8rem; font: 600 1.2rem var(--sans); color: var(--ink); background: var(--panel); border: 1px solid var(--rule); border-radius: 999px; box-shadow: 0 6px 18px rgba(0, 0, 0, .18); cursor: pointer; }
+.to-top:hover, .to-top:focus-visible { border-color: var(--accent); outline: none; }
+.to-top[hidden] { display: none; }
+body.zoom-lock .to-top { display: none; }
+@media print {
+  .masthead .theme, .tabs, .index, .to-top, .zoom-btn, .edo-plot .controls, .edo-plot .tools, .edo-plot .actions, .edo-plot .hint, .zoom-backdrop { display: none !important; }
+  body { background: #fff; color: #000; }
+  .problem { break-inside: avoid-page; border-color: #bbb; }
+  .site-foot { border-color: #bbb; color: #333; }
+}
